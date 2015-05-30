@@ -1,4 +1,4 @@
-#import "Cloth.h"
+#include "Cloth.h"
 
 
 Cloth::Cloth(glm::vec2 size, glm::vec2 resolution)
@@ -6,17 +6,17 @@ Cloth::Cloth(glm::vec2 size, glm::vec2 resolution)
    /*Cloth Generation*/
 }
 
-Cloth::init()
+void Cloth::init()
 {
    /*Buffer generation*/
 }
 
-Cloth::step(float dt)
+void Cloth::step(float dt)
 {
    /*Cloth simulation*/
 }
 
-Cloth::bind()
+void Cloth::bind()
 {
    /*update vertices on GPU*/
 }
