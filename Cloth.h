@@ -31,13 +31,14 @@ class Cloth
 {
 public:
    Cloth(glm::vec2 size, glm::vec2 resolution);
-   ~Cloth();
-   void step();
+   ~Cloth(){}
+   void init();
+   void step(float dt);
    void bind();
-   void draw(h_pos, h_nor);
-   Triangle getTriangle(int triangle);
-
+   void draw(GLint h_pos, GLint h_nor);
+ 
 private:
+
    GLuint posBufID;
    GLuint norBufID;
 
