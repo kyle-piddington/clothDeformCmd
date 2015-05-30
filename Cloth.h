@@ -32,6 +32,7 @@ class Cloth
 public:
    Cloth(glm::vec2 size, glm::vec2 resolution);
    ~Cloth(){}
+   void precalc();
    void init();
    void step(float dt);
    void bind();
@@ -44,11 +45,12 @@ private:
 
    int numTriangles;
    std::vector<glm::vec3> vertex_position;
-   std::vector<glm::vec2> vertex_uv;
    std::vector<glm::vec3> vertex_velocity;
+   std::vector<glm::vec2> weights;
+   std::vector<float> d;
    std::vector<int> indices;
 
-
+   
 
 };
 #endif
