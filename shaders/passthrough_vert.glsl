@@ -1,6 +1,6 @@
 attribute vec4 vertPos; // in object space
 attribute vec3 vertNor; // in object space
-attribute vec2 vertTexCoords;
+//attribute vec2 vertTexCoords;
 uniform mat4 P;
 uniform mat4 MV;
 uniform mat4 NORM;

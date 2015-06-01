@@ -20,19 +20,19 @@
 #include "SimpleShape.h"
 #include "glm/gtx/rotate_vector.hpp"
 #include "Program.h"
+#include "Cloth.h"
 #include <memory>
 
 
 using namespace std;
 bool keyToggles[256];
-float t;
+float t, dt;
 Camera camera;
 Program prog_phong;
 Program prog_debug;
 
-Shape shape;
-Shape orientedPlane;
 
+Cloth testCloth(1,1,20);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
@@ -41,7 +41,6 @@ Material defaultMaterial = Material(
 		200.0);
 std::vector<Light> defaultLights;
 
-float gridResolution = 128;
 
 
 
@@ -53,7 +52,7 @@ void initGL()
 	//
 
 	// Set background color
-	glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 	// Enable z-buffer test
 	glEnable(GL_DEPTH_TEST);
 
@@ -70,6 +69,7 @@ void initGL()
 	prog_phong.init();
 	prog_phong.addAttribute("vertPos");
 	prog_phong.addAttribute("vertNor");
+	//prog_phong.addAttribute("vertTexCoords");
 	prog_phong.addUniform("P");
 	prog_phong.addUniform("MV");
 	prog_phong.addUniform("NORM");
@@ -91,10 +91,9 @@ void initGL()
 	defaultLights.push_back(Light(glm::vec3(1.0,1.0,1.0),0.8));
 	defaultLights.push_back(Light(glm::vec3(-1.0,1.0,1.0),0.2));
 	GLSL::checkVersion();
-
-	shape.load("models/bunny.obj");
-	shape.init();
-
+	testCloth.init();
+	testCloth.bind();
+	
 }
 
 void reshapeGL(int w, int h)
@@ -107,7 +106,7 @@ void reshapeGL(int w, int h)
 
 void update()
 {
-	
+	testCloth.step(t);
 }
 void drawDebug()
 {
@@ -175,9 +174,10 @@ void drawGL()
 	free(lInt);
 
 	// Draw shape
-	
-	shape.draw(prog_phong.getAttribute("vertPos"),
-				  prog_phong.getAttribute("vertNor"));
+
+	testCloth.draw(prog_phong.getAttribute("vertPos"),
+				  prog_phong.getAttribute("vertNor"),
+				  -1);
 
 
 
@@ -237,6 +237,8 @@ void keyboardGL(unsigned char key, int x, int y)
 }
 void idleGL()
 {
+	dt = glutGet(GLUT_ELAPSED_TIME) - t;
+	t =  glutGet(GLUT_ELAPSED_TIME)/1000.0f;
 	update();
 	glutPostRedisplay();
 }

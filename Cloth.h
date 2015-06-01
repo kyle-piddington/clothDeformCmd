@@ -1,6 +1,10 @@
-#ifndef __CLOTH_H__
-#define __CLOTH_H__
-#include "glm/glm.hpp"
+/**
+ * A horribly ineficient shape for a triangle mesh.
+ * Seriously it's awful, don't use it.
+ *
+ */
+#ifndef __Cloth_H___
+#define __Cloth_H___
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #endif
@@ -12,43 +16,29 @@
 #include "glm/glm.hpp"
 #include <vector>
 
-typedef struct Vertex
-{
-   glm::vec3 position;
-   glm::vec3 velocity;
-}Vertex;
-
-
-typedef struct Triangle
-{
-   Vertex a;
-   Vertex b;
-   Vertex c;
-}Triangle;
 
 
 class Cloth
 {
 public:
-   Cloth(glm::vec2 size, glm::vec2 resolution);
-   ~Cloth(){}
-   void init();
-   void step(float dt);
+   Cloth(int w, int h, int res);
+   ~Cloth();
    void bind();
-   void draw(GLint h_pos, GLint h_nor);
- 
+   void init();
+   void draw(GLint h_pos, GLint h_nor, GLint h_tex);
+   void step(float time);
 private:
-
+   std::vector<float> verts;
+   std::vector<float> norms;
+   std::vector<float> tex;
+   std::vector<int> inds;
    GLuint posBufID;
    GLuint norBufID;
-
-   int numTriangles;
-   std::vector<glm::vec3> vertex_position;
-   std::vector<glm::vec2> vertex_uv;
-   std::vector<glm::vec3> vertex_velocity;
-   std::vector<int> indices;
-
-
-
+   GLuint indBufID;
+   GLuint texBufID;
+   void rebindNorms();
+   void rebindVerts();
 };
+
+
 #endif
