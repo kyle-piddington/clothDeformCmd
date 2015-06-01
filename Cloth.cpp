@@ -46,6 +46,12 @@ Cloth::~Cloth()
 
 }
 
+//precalculation
+void Cloth::precalc(){
+   //calculate for every triangle.
+   //set constants for each triangle.  an individual point will have different constants for each triangle it's part of
+}
+
 void Cloth::init()
 {
    glGenBuffers(1, &posBufID);
