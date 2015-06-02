@@ -27,6 +27,19 @@ typedef struct Triangle
    int idxC;
 }Triangle;
 
+
+typedef struct Weights{
+   float d;
+   float ua;
+   float va;
+   float ub;
+   float vb;
+   float uc;
+   float vc;
+
+}Weights;
+
+
 class Cloth
 {
 public:
@@ -49,10 +62,15 @@ private:
    void rebindNorms();
    void rebindVerts();
    void precalc();
+
+   //weights calculated in precalc
+   std::vector<Triangle> triList;
+   std::vector<Weights> triWeights;
    //Inline helper methods
    inline glm::vec2 getUV(int vertIdx);
    inline glm::vec3 getVert(int vertIdx);
    inline Triangle getTriangle(int triangleNumber);
+   Weights precalcTriangle(Triangle t);
    float t;
 
 
