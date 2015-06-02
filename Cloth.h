@@ -17,6 +17,17 @@
 #include <vector>
 
 
+typedef struct Weights{
+   float d;
+   float ua;
+   float va;
+   float ub;
+   float vb;
+   float uc;
+   float vc;
+
+}Weights;
+
 
 class Cloth
 {
@@ -39,6 +50,10 @@ private:
    void rebindNorms();
    void rebindVerts();
    void precalc();
+
+   //weights calculated in precalc
+   std::vector<Triangle> triList;
+   std::vector<Weights> triWeights;
 };
 
 

@@ -46,10 +46,34 @@ Cloth::~Cloth()
 
 }
 
-//precalculation
-void Cloth::precalc(){
+//set constants for each triangle.  an individual point will have different constants for each triangle it's part of
+Weights precalcTriangle(Triangle t){
+   //get uvs
+   glm::vec2 a = getUV(t.vertA);
+   glm::vec2 b = getUV(t.vertB);
+   glm::vec2 c = getUV(t.vertC);
+  
+   //create and set weights
+   Weights w;
+   w.d = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
+   float recrip = 1.0 / w.d;
+
+   w.ua = (b.y - c.y) * recrip;
+   w.va = (c.x - b.x) * recrip;
+   w.ub = (c.y - a.y) * recrip;
+   w.vb = (a.x - c.x) * recrip;
+   w.uc = (a.y - b.y) * recrip;
+   w.vc = (b.x - a.y) * recrip;
    //calculate for every triangle.
-   //set constants for each triangle.  an individual point will have different constants for each triangle it's part of
+   return w;
+}
+
+//Precalculate all triangles
+void Cloth::precalc(){
+   for(int i = 0; i < numTriangles; i++){
+      triList.push_back(getTriangle(i));
+      triWeights.push_back( precalcTriangle(triList.back()) );
+   }
 }
 
 void Cloth::init()
