@@ -17,7 +17,7 @@
 #include "Shader.h"
 #include "Material.h"
 #include "Light.h"
-#include "SimpleShape.h"
+
 #include "glm/gtx/rotate_vector.hpp"
 #include "Program.h"
 #include "Cloth.h"
@@ -26,7 +26,7 @@
 
 using namespace std;
 bool keyToggles[256];
-float t, dt;
+float t = 0, dt = 0;
 Camera camera;
 Program prog_phong;
 Program prog_debug;
@@ -104,9 +104,9 @@ void reshapeGL(int w, int h)
 	camera.setAspect((float)w/h);
 }
 
-void update()
+void update(float dt)
 {
-	testCloth.step(t);
+	testCloth.step(dt);
 }
 void drawDebug()
 {
@@ -238,8 +238,8 @@ void keyboardGL(unsigned char key, int x, int y)
 void idleGL()
 {
 	dt = glutGet(GLUT_ELAPSED_TIME) - t;
-	t =  glutGet(GLUT_ELAPSED_TIME)/1000.0f;
-	update();
+	t =  glutGet(GLUT_ELAPSED_TIME);
+	update(dt);
 	glutPostRedisplay();
 }
 

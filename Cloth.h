@@ -17,6 +17,15 @@
 #include <vector>
 
 
+typedef struct Triangle
+{
+   glm::vec3 vertA;
+   int idxA;
+   glm::vec3 vertB;
+   int idxB;
+   glm::vec3 vertC;
+   int idxC;
+}Triangle;
 
 class Cloth
 {
@@ -32,6 +41,7 @@ private:
    std::vector<float> norms;
    std::vector<float> tex;
    std::vector<int> inds;
+   int numTriangles;
    GLuint posBufID;
    GLuint norBufID;
    GLuint indBufID;
@@ -39,6 +49,13 @@ private:
    void rebindNorms();
    void rebindVerts();
    void precalc();
+   //Inline helper methods
+   inline glm::vec2 getUV(int vertIdx);
+   inline glm::vec3 getVert(int vertIdx);
+   inline Triangle getTriangle(int triangleNumber);
+   float t;
+
+
 };
 
 

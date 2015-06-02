@@ -7,9 +7,9 @@ indBufID(0),
 texBufID(0)
 {
    //init();
-   for(int i = 0 ; i < res; i++)
+   for(int j = 0 ; j < res; j++)
    {
-      for(int j = 0; j < res; j++)
+      for(int i = 0; i < res; i++)
       {
          verts.push_back(i*((float)w/(res-1)) - w/2.0);
          verts.push_back(j*((float)h/(res-1)) - h/2.0);
@@ -20,9 +20,9 @@ texBufID(0)
       }
    }
 
-   for(int i = 0; i < res-1; i++)
+   for(int j = 0; j < res-1; j++)
    {
-      for(int j = 0; j < res-1; j++)
+      for(int i = 0; i < res-1; i++)
       {
          inds.push_back(i*res + j);
          inds.push_back(i*res + j + 1);
@@ -37,6 +37,7 @@ texBufID(0)
    {
       std::cout << *i << " " << (*(i + 1)) << " " << (*(i + 2)) << std::endl;
    }
+   numTriangles = inds.size()/3;
    std::cout << inds.size() << std::endl;
 
 }
@@ -52,6 +53,9 @@ void Cloth::precalc(){
    //set constants for each triangle.  an individual point will have different constants for each triangle it's part of
 }
 
+/**
+ * Generate the initial buffers
+ */
 void Cloth::init()
 {
    glGenBuffers(1, &posBufID);
@@ -62,6 +66,9 @@ void Cloth::init()
 
 }
 
+/**
+ * Bind the initial position, index, and normal buffers
+ */
 void Cloth::bind()
 {
    glBindBuffer(GL_ARRAY_BUFFER, posBufID);
@@ -78,10 +85,13 @@ void Cloth::bind()
    rebindNorms();
    glBindBuffer(GL_ARRAY_BUFFER, 0);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-   
+
 
 }
 
+/**
+ * Update and rebind the vertices, and store on the gpu
+ */
 void Cloth::rebindVerts()
 {
    glBindBuffer(GL_ARRAY_BUFFER, posBufID);
@@ -89,6 +99,10 @@ void Cloth::rebindVerts()
    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
+
+/**
+ * Update and rebind the normals, and store on the GPU
+ */
 void Cloth::rebindNorms()
 {
    norms.resize(verts.size());
@@ -110,7 +124,7 @@ void Cloth::rebindNorms()
          verts[3*(*(i + 2)) + 1],
          verts[3*(*(i + 2)) + 2]
          );
-      glm::vec3 norm = glm::cross((c-a),(b-a));
+      glm::vec3 norm = glm::cross((b-a),(c-a));
       norms[3*(*i)]    +=(norm.x);
       norms[3*(*i) + 1]+=(norm.y);
       norms[3*(*i) + 2]+=(norm.z);
@@ -131,13 +145,20 @@ void Cloth::rebindNorms()
   // std::cout << "Norms: " << norms.size() << std::endl;
 
 }
+
+/**
+ * Draw the cloth
+ * @param h_pos position handle
+ * @param h_nor normal handle
+ * @param h_tex texture handle
+ */
 void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 {
    // Enable and bind position array for drawing
    GLSL::enableVertexAttribArray(h_pos);
    glBindBuffer(GL_ARRAY_BUFFER, posBufID);
    glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, 0);
-   
+
    // Enable and bind normal array (if it exists) for drawing
    if(norBufID && h_nor >= 0) {
 
@@ -173,9 +194,52 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 }
 void Cloth::step(float dt)
 {
+
   /**
    * Physics Code Hither
    */
-  rebindVerts();
-  rebindNorms();
+
+   rebindVerts();
+   rebindNorms();
+}
+
+/**
+ * Retrieve the UV value of a vertex
+ * @param  vertIdx the vertex index
+ * @return         the uv value, as a vec2
+ */
+inline glm::vec2 Cloth::getUV(int vertIdx)
+{
+   return glm::vec2(tex[vertIdx*3],tex[vertIdx*3+1]);
+}
+
+/**
+ * Retrieve the XYZ value of a vertex
+ * @param  vertIdx the indx of the vertex
+ * @return         the position of the vertex
+ */
+inline glm::vec3 Cloth::getVert(int vertIdx)
+{
+   return glm::vec3(verts[3*vertIdx],
+                    verts[3*vertIdx + 1],
+                    verts[3*vertIdx +2]);
+}
+
+/**
+ * Retrieve a triangle from a vertex
+ * @param triangleNumber the triangle number
+ */
+inline Triangle Cloth::getTriangle(int triangleNumber)
+{
+   int idx1 = inds[3*triangleNumber];
+   int idx2 = inds[3*triangleNumber + 1];
+   int idx3 = inds[3*triangleNumber + 2];
+   Triangle tris;
+   tris.vertA = getVert(idx1);
+   tris.idxA = idx1;
+   tris.vertB = getVert(idx2);
+   tris.idxB = idx2;
+   tris.vertC = getVert(idx3);
+   tris.idxC = idx3;
+   return tris;
 }
