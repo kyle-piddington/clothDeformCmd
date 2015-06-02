@@ -38,6 +38,7 @@ private:
    GLuint texBufID;
    void rebindNorms();
    void rebindVerts();
+   void precalc();
 };
 
 
