@@ -248,7 +248,7 @@ int main(int argc, char **argv)
 	glutInit(&argc, argv);
 	glutInitWindowSize(400, 400);
 	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
-	glutCreateWindow("Kyle Piddington");
+	glutCreateWindow("Zach Arend");
 	glutMouseFunc(mouseGL);
 	glutMotionFunc(motionGL);
 	glutKeyboardFunc(keyboardGL);
