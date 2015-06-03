@@ -43,7 +43,7 @@ typedef struct Weights{
 class Cloth
 {
 public:
-   Cloth(int w, int h, int res);
+   Cloth(int w, int h, int res, float youngMod = 1000.0f, float poissonCoeff = 0.0f, float dampening = 0.0f);
    ~Cloth();
    void bind();
    void init();
@@ -51,6 +51,7 @@ public:
    void step(float time);
 private:
    std::vector<float> verts;
+   std::vector<float> velocities;
    std::vector<float> norms;
    std::vector<float> tex;
    std::vector<int> inds;
@@ -66,6 +67,8 @@ private:
    //weights calculated in precalc
    std::vector<Triangle> triList;
    std::vector<Weights> triWeights;
+   //Cheaper to allocate here than every frame
+   std::vector<float> forces;
    //Inline helper methods
    inline glm::vec2 getUV(int vertIdx);
    inline glm::vec3 getVert(int vertIdx);
@@ -73,6 +76,9 @@ private:
    Weights precalcTriangle(Triangle t);
    float t;
 
+   float youngMod;
+   float poissonCoeff;
+   float dampening;
 
 };
 

@@ -1,6 +1,6 @@
 #include "Cloth.h"
 
-Cloth::Cloth(int w, int h, int res) :
+Cloth::Cloth(int w, int h, int res, float youngMod, float poissonCoeff, float dampening) :
 posBufID(0),
 norBufID(0),
 indBufID(0),
@@ -40,6 +40,8 @@ texBufID(0)
       triList.push_back(tris);
       triWeights.push_back(precalcTriangle(tris));
    }
+   forces.resize(verts.size());
+   velocities.resize(verts.size());
 }
 Cloth::~Cloth()
 {
@@ -218,7 +220,7 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 }
 void Cloth::step(float dt)
 {
-
+   }
   /**
    * Physics Code Hither
    */
