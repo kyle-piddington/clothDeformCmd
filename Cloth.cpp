@@ -33,13 +33,13 @@ texBufID(0)
       }
    }
 
-   for (std::vector<float>::iterator i = verts.begin(); i != verts.end(); i+=3)
-   {
-      std::cout << *i << " " << (*(i + 1)) << " " << (*(i + 2)) << std::endl;
-   }
    numTriangles = inds.size()/3;
-   std::cout << inds.size() << std::endl;
-
+   for(int i = 0; i < numTriangles; i++)
+   {
+      Triangle tris = getTriangle(i);
+      triList.push_back(tris);
+      triWeights.push_back(precalcTriangle(tris));
+   }
 }
 Cloth::~Cloth()
 {
