@@ -1,5 +1,5 @@
 #include "Cloth.h"
-
+#include "RK4.h"
 Cloth::Cloth(int w, int h, int res, float youngMod, float poissonCoeff, float dampening) :
 posBufID(0),
 norBufID(0),
@@ -55,7 +55,7 @@ Weights Cloth::precalcTriangle(Triangle t){
    glm::vec2 a = getUV(t.idxA);
    glm::vec2 b = getUV(t.idxB);
    glm::vec2 c = getUV(t.idxC);
-  
+
    //create and set weights
    Weights w;
    w.d = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
@@ -218,15 +218,44 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
    glBindBuffer(GL_ARRAY_BUFFER, 0);
    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
+
+
+
 void Cloth::step(float dt)
 {
-   }
+
   /**
    * Physics Code Hither
    */
-
+   integrateForces(dt);
    rebindVerts();
    rebindNorms();
+}
+
+
+/**
+ * Use RK4 integration of force
+ * @param dt delta time
+ */
+void Cloth::integrateForces(float dt)
+{
+   for(int i = 0; i < verts.size(); i+=3)
+   {
+      RK4Solver::State vertState;
+      vertState.pos = glm::vec3(verts[i],verts[i+1],verts[i+2] );
+      vertState.vel = glm::vec3(velocities[i],velocities[i+1],velocities[i+2]);
+      vertState.nextForce =
+       glm::vec3(forces[i],forces[i+1],forces[i+2]);
+      vertState.mass = 100.0/verts.size();
+      RK4Solver::integrate(vertState, t, dt);
+      verts[i] = vertState.pos.x;
+      verts[i+1] = vertState.pos.y;
+      verts[i+2] = vertState.pos.z;
+      velocities[i] = vertState.vel.x;
+      velocities[i+1] = vertState.vel.y;
+      velocities[i+2] = vertState.vel.z;
+
+   }
 }
 
 /**

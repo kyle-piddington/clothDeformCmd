@@ -74,6 +74,7 @@ private:
    inline glm::vec3 getVert(int vertIdx);
    inline Triangle getTriangle(int triangleNumber);
    Weights precalcTriangle(Triangle t);
+   void integrateForces(float dt);
    float t;
 
    float youngMod;
