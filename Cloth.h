@@ -13,17 +13,18 @@
 #endif
 #include <iostream>
 #include "GLSL.h"
-#include "glm/glm.hpp"
 #include <vector>
+#include "Eigen/Sparse"
+#include "Eigen/Geometry"
 
 
 typedef struct Triangle
 {
-   glm::vec3 vertA;
+   Eigen::Vector3d vertA;
    int idxA;
-   glm::vec3 vertB;
+   Eigen::Vector3d vertB;
    int idxB;
-   glm::vec3 vertC;
+   Eigen::Vector3d vertC;
    int idxC;
 }Triangle;
 
@@ -67,8 +68,8 @@ private:
    std::vector<Triangle> triList;
    std::vector<Weights> triWeights;
    //Inline helper methods
-   inline glm::vec2 getUV(int vertIdx);
-   inline glm::vec3 getVert(int vertIdx);
+   inline Eigen::Vector2d getUV(int vertIdx);
+   inline Eigen::Vector3d getVert(int vertIdx);
    inline Triangle getTriangle(int triangleNumber);
    Weights precalcTriangle(Triangle t);
    float t;
