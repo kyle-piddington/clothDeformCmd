@@ -13,8 +13,9 @@
 #endif
 #include <iostream>
 #include "GLSL.h"
-#include "glm/glm.hpp"
 #include <vector>
+#include "Eigen/Sparse"
+#include "Eigen/Geometry"
 
 
 

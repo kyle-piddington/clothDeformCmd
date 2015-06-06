@@ -88,7 +88,6 @@ void Cloth::rebindVerts()
    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-
 /**
  * Update and rebind the normals, and store on the GPU
  */
@@ -98,37 +97,37 @@ void Cloth::rebindNorms()
    std::fill(norms.begin(), norms.end(), 0);
    for (std::vector<int>::iterator i = inds.begin(); i != inds.end(); i+=3)
    {
-      glm::vec3 a = glm::vec3(
+      Eigen::Vector3d a = Eigen::Vector3d(
          verts[3*(*i)],
          verts[3*(*i) + 1],
          verts[3*(*i) + 2]
          );
-      glm::vec3 b = glm::vec3(
+      Eigen::Vector3d b = Eigen::Vector3d(
          verts[3*(*(i + 1))],
          verts[3*(*(i + 1)) + 1],
          verts[3*(*(i + 1)) + 2]
          );
-      glm::vec3 c = glm::vec3(
+      Eigen::Vector3d c = Eigen::Vector3d(
          verts[3*(*(i + 2))],
          verts[3*(*(i + 2)) + 1],
          verts[3*(*(i + 2)) + 2]
          );
-      glm::vec3 norm = glm::cross((b-a),(c-a));
-      norms[3*(*i)]    +=(norm.x);
-      norms[3*(*i) + 1]+=(norm.y);
-      norms[3*(*i) + 2]+=(norm.z);
+      Eigen::Vector3d norm = (b-a).cross(c-a);
+      norms[3*(*i)]    +=(norm.x());
+      norms[3*(*i) + 1]+=(norm.y());
+      norms[3*(*i) + 2]+=(norm.z());
 
-      norms[3*(*(i + 1))]+=(norm.x);
-      norms[3*(*(i + 1)) + 1]+=(norm.y);
-      norms[3*(*(i + 1)) + 2]+=(norm.z);
+      norms[3*(*(i + 1))]+=(norm.x());
+      norms[3*(*(i + 1)) + 1]+=(norm.y());
+      norms[3*(*(i + 1)) + 2]+=(norm.z());
 
-      norms[3*(*(i + 2))]+=(norm.x);
-      norms[3*(*(i + 2)) + 1]+=(norm.y);
-      norms[3*(*(i + 2)) + 2]+=(norm.z);
+      norms[3*(*(i + 2))]+=(norm.x());
+      norms[3*(*(i + 2)) + 1]+=(norm.y());
+      norms[3*(*(i + 2)) + 2]+=(norm.z());
    }
 
    glBindBuffer(GL_ARRAY_BUFFER, norBufID);
-   glBufferData(GL_ARRAY_BUFFER, norms.size()*sizeof(float), &norms[0], GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, norms.size()*sizeof(double), &norms[0], GL_STATIC_DRAW);
    glBindBuffer(GL_ARRAY_BUFFER,0);
    assert(glGetError() == GL_NO_ERROR);
   // std::cout << "Norms: " << norms.size() << std::endl;
@@ -146,20 +145,20 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
    // Enable and bind position array for drawing
    GLSL::enableVertexAttribArray(h_pos);
    glBindBuffer(GL_ARRAY_BUFFER, posBufID);
-   glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, 0);
+   glVertexAttribPointer(h_pos, 3, GL_DOUBLE, GL_FALSE, 0, 0);
 
    // Enable and bind normal array (if it exists) for drawing
    if(norBufID && h_nor >= 0) {
 
       GLSL::enableVertexAttribArray(h_nor);
       glBindBuffer(GL_ARRAY_BUFFER, norBufID);
-      glVertexAttribPointer(h_nor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+      glVertexAttribPointer(h_nor, 3, GL_DOUBLE, GL_FALSE, 0, 0);
    }
 
    if(texBufID && h_tex >= 0){
       GLSL::enableVertexAttribArray(h_tex);
       glBindBuffer(GL_ARRAY_BUFFER,texBufID);
-      glVertexAttribPointer(h_tex,2,GL_FLOAT,GL_FALSE, 0, 0);
+      glVertexAttribPointer(h_tex,2,GL_DOUBLE,GL_FALSE, 0, 0);
    }
    // Bind index array for drawing
    int nIndices = inds.size();
@@ -198,9 +197,9 @@ void Cloth::step(float dt)
  * @param  vertIdx the vertex index
  * @return         the uv value, as a vec2
  */
-inline glm::vec2 Cloth::getUV(int vertIdx)
+inline Eigen::Vector2d Cloth::getUV(int vertIdx)
 {
-   return glm::vec2(tex[vertIdx*3],tex[vertIdx*3+1]);
+   return Eigen::Vector2d(tex[vertIdx*3],tex[vertIdx*3+1]);
 }
 
 /**
@@ -208,11 +207,11 @@ inline glm::vec2 Cloth::getUV(int vertIdx)
  * @param  vertIdx the indx of the vertex
  * @return         the position of the vertex
  */
-inline glm::vec3 Cloth::getVert(int vertIdx)
+inline Eigen::Vector3d Cloth::getVert(int vertIdx)
 {
-   return glm::vec3(verts[3*vertIdx],
-                    verts[3*vertIdx + 1],
-                    verts[3*vertIdx +2]);
+   return Eigen::Vector3d(verts[3*vertIdx],
+                          verts[3*vertIdx + 1],
+                          verts[3*vertIdx +2]);
 }
 
 
