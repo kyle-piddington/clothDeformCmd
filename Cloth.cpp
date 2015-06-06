@@ -1,10 +1,13 @@
 #include "Cloth.h"
 #include "RK4.h"
+#include "ClothForceIntegrator.h"
+
 Cloth::Cloth(int w, int h, int res) :
 posBufID(0),
 norBufID(0),
 indBufID(0),
-texBufID(0)
+texBufID(0),
+res(res)
 {
    //init();
    for(int j = 0 ; j < res; j++)
@@ -12,7 +15,7 @@ texBufID(0)
       for(int i = 0; i < res; i++)
       {
          verts.push_back(i*((float)w/(res-1)) - w/2.0);
-         verts.push_back(j*((float)h/(res-1)) - h/2.0);
+         verts.push_back(-j*((float)h/(res-1)) + h/2.0);
          verts.push_back(0);
          tex.push_back((float)i/(res-1));
          tex.push_back((float)j/(res-1));
@@ -38,7 +41,7 @@ texBufID(0)
 Cloth::~Cloth()
 {
 
-
+   delete integrator;
 }
 
 
@@ -47,6 +50,8 @@ Cloth::~Cloth()
  */
 void Cloth::init()
 {
+   integrator = new ClothForceIntegrator();
+   integrator->init(*this);
    glGenBuffers(1, &posBufID);
    //glGenBuffers(1, &texBufID);
    glGenBuffers(1, &indBufID);
@@ -127,7 +132,7 @@ void Cloth::rebindNorms()
    }
 
    glBindBuffer(GL_ARRAY_BUFFER, norBufID);
-   glBufferData(GL_ARRAY_BUFFER, norms.size()*sizeof(double), &norms[0], GL_STATIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, norms.size()*sizeof(float), &norms[0], GL_STATIC_DRAW);
    glBindBuffer(GL_ARRAY_BUFFER,0);
    assert(glGetError() == GL_NO_ERROR);
   // std::cout << "Norms: " << norms.size() << std::endl;
@@ -145,20 +150,20 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
    // Enable and bind position array for drawing
    GLSL::enableVertexAttribArray(h_pos);
    glBindBuffer(GL_ARRAY_BUFFER, posBufID);
-   glVertexAttribPointer(h_pos, 3, GL_DOUBLE, GL_FALSE, 0, 0);
+   glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
    // Enable and bind normal array (if it exists) for drawing
    if(norBufID && h_nor >= 0) {
 
       GLSL::enableVertexAttribArray(h_nor);
       glBindBuffer(GL_ARRAY_BUFFER, norBufID);
-      glVertexAttribPointer(h_nor, 3, GL_DOUBLE, GL_FALSE, 0, 0);
+      glVertexAttribPointer(h_nor, 3, GL_FLOAT, GL_FALSE, 0, 0);
    }
 
    if(texBufID && h_tex >= 0){
       GLSL::enableVertexAttribArray(h_tex);
       glBindBuffer(GL_ARRAY_BUFFER,texBufID);
-      glVertexAttribPointer(h_tex,2,GL_DOUBLE,GL_FALSE, 0, 0);
+      glVertexAttribPointer(h_tex,2,GL_FLOAT,GL_FALSE, 0, 0);
    }
    // Bind index array for drawing
    int nIndices = inds.size();
@@ -185,7 +190,10 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 
 void Cloth::step(float dt)
 {
-
+   std::vector<int> lockedVerts;
+   lockedVerts.push_back(0);
+   lockedVerts.push_back(res-1);
+   integrator->step(dt,&verts[0],lockedVerts);
    rebindVerts();
    rebindNorms();
 }
@@ -197,9 +205,11 @@ void Cloth::step(float dt)
  * @param  vertIdx the vertex index
  * @return         the uv value, as a vec2
  */
-inline Eigen::Vector2d Cloth::getUV(int vertIdx)
+Eigen::Vector2d Cloth::getUV(int vertIdx)
 {
-   return Eigen::Vector2d(tex[vertIdx*3],tex[vertIdx*3+1]);
+    std::cout << vertIdx << " ";
+     
+   return Eigen::Vector2d(tex[vertIdx*2],tex[vertIdx*2+1]);
 }
 
 /**
@@ -207,7 +217,7 @@ inline Eigen::Vector2d Cloth::getUV(int vertIdx)
  * @param  vertIdx the indx of the vertex
  * @return         the position of the vertex
  */
-inline Eigen::Vector3d Cloth::getVert(int vertIdx)
+Eigen::Vector3d Cloth::getVert(int vertIdx)
 {
    return Eigen::Vector3d(verts[3*vertIdx],
                           verts[3*vertIdx + 1],

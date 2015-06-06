@@ -1,6 +1,11 @@
 #include "ClothForceIntegrator.h"
-
-
+#define YOUNG_MOD 1000.0 //N/m
+#define POISSON_DISTRB 0.0
+#define MASS 10.0 //kg/m
+#define GRAVITY 9.8
+#include <algorithm>
+#include <iostream>
+const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_DISTRB * POISSON_DISTRB);
 /**
  * Push the force derivative structure to the Phi
  */
@@ -18,45 +23,63 @@ struct ForceDerivative
    double h2;
    double h3;
 };
-#pragma offload_attribute(pop)
-
 
 //OFFLOAD METHODS
 //(THESE SHOULD BE OFFLOADABLE)
 
-inline struct Vector sumU(Vector & a, Vector & b, Vector & C, int triangle)
+
+
+inline struct Vector sumU(Vector & a, Vector & b, Vector & c,
+                          double  wUA, double  wUB, double  wUC)
 {
 
-   Vector point;
-   point.x = a.x * wUA[triangle] + b.x * wUB[triangle] + c.x * wUC[triangle];
-   point.y = a.y * wUA[triangle] + b.y * wUB[triangle] + c.y * wUC[triangle];
-   point.z = a.z * wUA[triangle] + b.z * wUB[triangle] + c.z * wUC[triangle];
-   return Vector;
+   struct Vector point;
+   point.x = a.x * wUA + b.x * wUB + c.x * wUC;
+   point.y = a.y * wUA + b.y * wUB + c.y * wUC;
+   point.z = a.z * wUA + b.z * wUB + c.z * wUC;
+   return point;
 }
-inline struct Vector sumV(Vector & a, Vector & b, Vector & C, int triangle)
+inline struct Vector sumV(Vector & a, Vector & b, Vector & c,
+                         double  wVA, double  wVB, double  wVC)
 {
 
-   Vector point;
-   point.x = a.x * wVA[triangle] + b.x * wVB[triangle] + c.x * wVC[triangle];
-   point.y = a.y * wVA[triangle] + b.y * wVB[triangle] + c.y * wVC[triangle];
-   point.z = a.z * wVA[triangle] + b.z * wVB[triangle] + c.z * wVC[triangle];
-   return Vector;
+   struct Vector point;
+   point.x = a.x * wVA + b.x * wVB + c.x * wVC;
+   point.y = a.y * wVA + b.y * wVB + c.y * wVC;
+   point.z = a.z * wVA + b.z * wVB + c.z * wVC;
+   return point;
 }
 
-}
-double calcXForceAtTime(double * vertX, double * velX, double t, double dt)
+
+inline Vector calculateForce(Vector U, Vector V, double rUJ, double rVJ, double d)
 {
-   return -1;
+   double euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
+   double evv = 0.5 * (V.x * V.x + V.y * V.y + V.z * V.z -1);
+   //EUV is 0.5* (UTV + VTU), should be 2 UtV
+   double euv = U.x * V.x + U.y * V.y + U.z * V.z;
+
+   Vector sigmas;
+   sigmas.x = euu + POISSON_DISTRB*evv;
+   sigmas.y = POISSON_DISTRB*evv + euu;
+   sigmas.z = euv * (1 - POISSON_DISTRB) / 2;
+   Vector force;
+   force.x = -abs(d)/2 *
+               sigmas.x * rUJ * U.x +
+               sigmas.y * rVJ * V.x +
+               sigmas.z * (rUJ * V.x + rVJ * U.x);
+
+   force.y = -abs(d)/2 *
+               sigmas.x * rUJ * U.y +
+               sigmas.y * rVJ * V.y +
+               sigmas.z * (rUJ * V.y + rVJ * U.y);
+
+   force.z = -abs(d)/2 *
+               sigmas.x * rUJ * U.z +
+               sigmas.y * rVJ * V.z +
+               sigmas.z * (rUJ * V.z + rVJ * U.z);
+   return force;
 }
 
-double calcYForceAtTime(double * vertX, double * velX, double t, double dt)
-{
-   return -1;
-}
-double calcZForceAtTime(double * vertX, double * velX, double t, double dt)
-{
-   return -1;
-}
 
 /**
  * Setup triangle weights organized by indicies
@@ -69,23 +92,38 @@ inline void ClothForceIntegrator::caluclateTriangleWeights(Cloth & cloth)
     */
    for(int i = 0; i < cloth.getNumTriangles()*3; i+=3)
    {
-      glm::vec2 a = cloth.getUV(indicies[i]);
-      glm::vec2 b = cloth.getUV(indicies[i+1]);
-      glm::vec2 c = cloth.getUV(indicies[i+2]);
-
+      std::cout << i << std::endl;
+      Eigen::Vector2d a = cloth.getUV(indicies[i]);
+      Eigen::Vector2d b = cloth.getUV(indicies[i+1]);
+      Eigen::Vector2d c = cloth.getUV(indicies[i+2]);
+      std::cout << std::endl;
       //create and set weights
-      float d = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
+      float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
       float recrip = 1.0 /  d;
 
-      wUA[i/3] = (b.y - c.y) * recrip;
-      wVA[i/3] = (c.x - b.x) * recrip;
-      wUB[i/3] = (c.y - a.y) * recrip;
-      wVB[i/3] = (a.x - c.x) * recrip;
-      wUC[i/3] = (a.y - b.y) * recrip;
-      wVC[i/3] = (b.x - a.y) * recrip;
+      wUA[i/3] = (b.y() - c.y()) * recrip;
+      wVA[i/3] = (c.x() - b.x()) * recrip;
+      wUB[i/3] = (c.y() - a.y()) * recrip;
+      wVB[i/3] = (a.x() - c.x()) * recrip;
+      wUC[i/3] = (a.y() - b.y()) * recrip;
+      wVC[i/3] = (b.x() - a.y()) * recrip;
    }
 
 }
+
+inline void caluclatePositionsAtTime(double * vertsX, double * vertsY, double * vertsZ,
+                              double * velsX, double * velsY, double * velsZ,
+                              double dt, int numVerts,
+                              double * outX, double * outY, double * outZ    )
+{
+   for(int i = 0; i < numVerts; i++)
+   {
+      outX[i] = vertsX[i] + velsX[i] * dt;
+      outY[i] = vertsY[i] + velsY[i] * dt;
+      outZ[i] = vertsZ[i] + velsZ[i] * dt;
+   }
+}
+
 
 
 /**
@@ -97,6 +135,7 @@ void ClothForceIntegrator::init(Cloth & cloth)
    /**
     * Replace with __mm_malloc later
     */
+   numTriangles = cloth.getNumTriangles();
    indicies = new int[cloth.getNumTriangles()*3];
    wUA = new double[cloth.getNumTriangles()];
    wUB = new double[cloth.getNumTriangles()];
@@ -105,6 +144,8 @@ void ClothForceIntegrator::init(Cloth & cloth)
    wVB = new double[cloth.getNumTriangles()];
    wVC = new double[cloth.getNumTriangles()];
    wUA = new double[cloth.getNumTriangles()];
+   dArray = new double[cloth.getNumTriangles()];
+   numVerts = cloth.getNumVerts();
    vertsX = new double[cloth.getNumVerts()];
    vertsY = new double[cloth.getNumVerts()];
    vertsZ = new double[cloth.getNumVerts()];
@@ -112,18 +153,114 @@ void ClothForceIntegrator::init(Cloth & cloth)
    velsY = new double[cloth.getNumVerts()];
    velsZ = new double[cloth.getNumVerts()];
 
+   forceX = new double[cloth.getNumVerts()];
+   forceY = new double[cloth.getNumVerts()];
+   forceZ = new double[cloth.getNumVerts()];
 
-   memcpy(indicies,cloth.getInds().data(), cloth.getInds().size());
+   for(int i = 0; i < cloth.getNumVerts(); i++)
+   {
+      Eigen::Vector3d vert = cloth.getVert(i);
+      vertsX[i] = vert.x();
+      vertsY[i] = vert.y();
+      vertsZ[i] = vert.z();
+   }
+
+   std::fill(velsX, velsX + numVerts, 0);
+   std::fill(velsY, velsY + numVerts, 0);
+   std::fill(velsZ, velsZ + numVerts, 0);
+
+
+   memcpy(indicies,cloth.getInds().data(), sizeof(int)*cloth.getInds().size());
    caluclateTriangleWeights(cloth);
 }
-void ClothForceIntegrator::step(double dt, double * outputVertices )
+void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<int> & lockedVerts )
 {
 
+   std::fill(forceX, forceX + numVerts, 0);
+   std::fill(forceY, forceY + numVerts, 0);
+   std::fill(forceZ, forceZ + numVerts, 0);
 
 
-   t += dt;
+
+   time += dt;
+   //Calculate a force vector
+   //
+   //EXPLICIT EULER FOR NOW, JESUS THIS IS GOING TO SUCK
+   for(int i = 0; i < numTriangles; i++)
+   {
+      Vector A, B, C;
+
+      A.x = vertsX[indicies[i*3]];
+      B.x = vertsX[indicies[i*3 + 1]];
+      C.x = vertsX[indicies[i*3 + 2]];
+
+      A.y = vertsY[indicies[i*3]];
+      B.y = vertsY[indicies[i*3 + 1]];
+      C.y = vertsY[indicies[i*3 + 2]];
+
+      A.z = vertsZ[indicies[i*3]];
+      B.z = vertsZ[indicies[i*3 + 1]];
+      C.z = vertsZ[indicies[i*3 + 2]];
+
+      Vector U = sumU(A,B,C,wUA[i],wUB[i],wUC[i]);
+      Vector V = sumU(A,B,C,wVA[i],wVB[i],wVC[i]);
+
+      Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+      Vector forceB = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+      Vector forceC = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+
+      //Update first vertex
+      forceX[indicies[i*3]] += forceA.x;
+      forceY[indicies[i*3]] += forceA.x;
+      forceZ[indicies[i*3]] += forceA.x;
+
+      //Update second vertex
+      forceX[indicies[i*3+1]] += forceB.x;
+      forceY[indicies[i*3+1]] += forceB.x;
+      forceZ[indicies[i*3+1]] += forceB.x;
+
+      //update third vertex
+      forceX[indicies[i*3 + 2]] += forceC.x;
+      forceY[indicies[i*3 + 2]] += forceC.x;
+      forceZ[indicies[i*3 + 2]] += forceC.x;
+
+   }
+
+
+   for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
+   {
+      forceX[*i]=0;
+      forceY[*i]=0;
+      forceZ[*i]=0;
+
+   }
+   const double recipMass = 1/MASS;
+
+   for(int i = 0; i < numVerts; i++)
+   {
+      velsX[i]  += forceX[i] * dt * recipMass;
+      vertsX[i] += velsX[i] * dt;
+
+      velsY[i]  += forceY[i] * dt * recipMass;
+      vertsY[i] += velsY[i] * dt;
+
+      velsZ[i]  += forceZ[i] * dt * recipMass;
+      vertsZ[i] += velsZ[i] * dt;
+
+
+   }
+   /**
+    * Set final vertex positions
+    */
+   for(int i = 0; i < numVerts; i++)
+   {
+      outputVertices[i*3] = (float)vertsX[i];
+      outputVertices[i*3+1] = (float)vertsY[i];
+      outputVertices[i*3+2] = (float)vertsZ[i];
+   }
+
    //Write to output vertices
-   
+
 }
 
 ClothForceIntegrator::~ClothForceIntegrator()
@@ -135,4 +272,14 @@ ClothForceIntegrator::~ClothForceIntegrator()
    delete [] wVB ;
    delete [] wVC ;
    delete [] vertsX ;
+   delete [] vertsY;
+   delete [] vertsZ;
+   delete [] velsX;
+   delete [] velsY;
+   delete [] velsZ;
+   delete [] indicies;
+   delete [] forceX;
+   delete [] forceY;
+   delete [] forceZ;
+   delete [] dArray;
 }

@@ -32,7 +32,7 @@ Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(1,1,20);
+Cloth testCloth(1,1,10);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
@@ -52,7 +52,7 @@ void initGL()
 	//
 
 	// Set background color
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	glClearColor(0.4f, 0.4f, 0.4f, 0.4f);
 	// Enable z-buffer test
 	glEnable(GL_DEPTH_TEST);
 
@@ -221,6 +221,12 @@ void keyboardGL(unsigned char key, int x, int y)
 			// ESCAPE
 			exit(0);
 			break;
+		case 's':
+			dt = 1/120.0f;
+			t += dt;
+			update(dt);
+
+			break;
 
 
 	}
@@ -228,6 +234,7 @@ void keyboardGL(unsigned char key, int x, int y)
 	{
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	}
+
 	else
 	{
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -237,10 +244,7 @@ void keyboardGL(unsigned char key, int x, int y)
 }
 void idleGL()
 {
-	dt = glutGet(GLUT_ELAPSED_TIME) - t;
-	t =  glutGet(GLUT_ELAPSED_TIME);
-	update(dt);
-	glutPostRedisplay();
+		glutPostRedisplay();
 }
 
 int main(int argc, char **argv)
