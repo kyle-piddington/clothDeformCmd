@@ -18,8 +18,8 @@ res(res)
          verts.push_back(0);
          verts.push_back(j*((float)h/(res-1)) - h/2.0);
          
-         tex.push_back((float)i/(res-1));
-         tex.push_back((float)j/(res-1));
+         tex.push_back((float)i/(res-1) * w);
+         tex.push_back((float)j/(res-1) * w);
 
       }
    }

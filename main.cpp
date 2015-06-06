@@ -23,7 +23,7 @@
 #include "Cloth.h"
 #include <memory>
 
-#define TIMESTEP 0.0005;
+#define TIMESTEP 0.0005
 using namespace std;
 bool keyToggles[256];
 double t = 0, dt = 0;
@@ -246,9 +246,12 @@ void idleGL()
 {
 		if(keyToggles[' '])
 		{
-		dt = TIMESTEP
-		t += dt;
-		update(dt);
+			for(int i = 0; i < (int)(1/(60.0)/TIMESTEP); i++)
+			{
+				dt = TIMESTEP;
+				t += dt;
+				update(dt);
+			}
 		}
 		glutPostRedisplay();
 }

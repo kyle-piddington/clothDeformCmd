@@ -26,7 +26,7 @@ private:
       float t,
       float dt,
       const Derivative &d);
-   static glm::vec3 acceleration(const State &state, float dt);
+   inline static glm::vec3 acceleration(const State &state, float dt);
 
 };
 #endif

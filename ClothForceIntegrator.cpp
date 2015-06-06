@@ -1,8 +1,9 @@
 #include "ClothForceIntegrator.h"
-#define YOUNG_MOD 1000.0 //N/m
-#define POISSON_DISTRB 0.0
-#define MASS 20.0 //kg/m
+#define YOUNG_MOD 3000.0 //N/m
+#define POISSON_DISTRB 0.5
+#define MASS 3.0 //kg/m
 #define GRAVITY 1.0
+#define DAMPN  0.00015
 #include <algorithm>
 #include <iostream>
 const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_DISTRB * POISSON_DISTRB);
@@ -41,17 +42,21 @@ inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
 
 
 
-inline Vector calculateForce(Vector U, Vector V, double rUJ, double rVJ, double d)
+inline Vector calculateForce(Vector U, Vector V, Vector dU, Vector dV,
+                             double rUJ, double rVJ, double d)
 {
    double euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
    double evv = 0.5 * (V.x * V.x + V.y * V.y + V.z * V.z -1);
    //EUV is 0.5* (UTV + VTU), should be 2 UtV
-   double euv = U.x * V.x + U.y * V.y + U.z * V.z;
+   double euv =  U.x * V.x + U.y * V.y + U.z * V.z;
+
+
+
 
    Vector sigmas;
-   sigmas.x = euu + POISSON_DISTRB*evv;
-   sigmas.y = POISSON_DISTRB*evv + euu;
-   sigmas.z = euv * (1 - POISSON_DISTRB) / 2;
+   sigmas.x = euu + POISSON_DISTRB*evv ;
+   sigmas.y = POISSON_DISTRB*evv + euu ;
+   sigmas.z = euv * (1 - POISSON_DISTRB) / 2 ;
 
    sigmas.x *= YoungPoissonMatrixScalar;
    sigmas.y *= YoungPoissonMatrixScalar;
@@ -181,7 +186,7 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
    //EXPLICIT EULER FOR NOW, JESUS THIS IS GOING TO SUCK
    for(int i = 0; i < numTriangles; i++)
    {
-      Vector A, B, C;
+      Vector A, B, C, vA, vB, vC;
 
       A.x = vertsX[indicies[i*3]];
       B.x = vertsX[indicies[i*3 + 1]];
@@ -195,13 +200,28 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       B.z = vertsZ[indicies[i*3 + 1]];
       C.z = vertsZ[indicies[i*3 + 2]];
 
+      vA.x = velsX[indicies[i*3]];
+      vB.x = velsX[indicies[i*3 + 1]];
+      vC.x = velsX[indicies[i*3 + 2]];
+
+      vA.y = velsY[indicies[i*3]];
+      vB.y = velsY[indicies[i*3 + 1]];
+      vC.y = velsY[indicies[i*3 + 2]];
+
+      vA.z = velsZ[indicies[i*3]];
+      vB.z = velsZ[indicies[i*3 + 1]];
+      vC.z = velsZ[indicies[i*3 + 2]];
+
       Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
       Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
 
+      Vector dU = sumPoint(vA,vB,vC,wUA[i],wUB[i],wUC[i]);
+      Vector dV = sumPoint(vA,vB,vC,wVA[i],wVB[i],wVC[i]);
 
-      Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
-      Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
-      Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
+
+      Vector forceA = calculateForce(U,V,dU,dV,wUA[i],wVA[i],dArray[i]);
+      Vector forceB = calculateForce(U,V,dU,dV,wUB[i],wVB[i],dArray[i]);
+      Vector forceC = calculateForce(U,V,dU,dV,wUC[i],wVC[i],dArray[i]);
 
       //Update first vertex
       forceX[indicies[i*3]] += forceA.x;
