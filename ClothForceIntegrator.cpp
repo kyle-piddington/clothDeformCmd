@@ -6,6 +6,8 @@
 #define DAMPN  0.00015
 #include <algorithm>
 #include <iostream>
+//#include <omp.h>
+
 const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_DISTRB * POISSON_DISTRB);
 /**
  * Push the force derivative structure to the Phi
@@ -184,6 +186,7 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
    //Calculate a force vector
    //
    //EXPLICIT EULER FOR NOW, JESUS THIS IS GOING TO SUCK
+   //#pragma omp parallel for
    for(int i = 0; i < numTriangles; i++)
    {
       Vector A, B, C, vA, vB, vC;
@@ -237,7 +240,6 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       forceX[indicies[i*3 + 2]] += forceC.x;
       forceY[indicies[i*3 + 2]] += forceC.y;
       forceZ[indicies[i*3 + 2]] += forceC.z;
-
    }
 
    for(int i = 0; i < numVerts; i++)
@@ -274,10 +276,15 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       outputVertices[i*3] = (float)vertsX[i];
       outputVertices[i*3+1] = (float)vertsY[i];
       outputVertices[i*3+2] = (float)vertsZ[i];
+
+      //Print to file for debugging
+      printf("(x:%f y:%f z:%f),", outputVertices[i*3], outputVertices[i*3+1], outputVertices[i*3+2]);
    }
+   printf("\n\n");
 
    //Write to output vertices
 
+   
 }
 
 ClothForceIntegrator::~ClothForceIntegrator()
