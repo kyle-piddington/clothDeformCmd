@@ -32,7 +32,7 @@ Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(0.5,0.5,4);
+Cloth testCloth(0.5,0.5,20);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
