@@ -34,6 +34,7 @@ public:
    int getNumVerts(){return verts.size()/3;}
    int getNumTriangles(){return numTriangles;}
    std::vector<int> getInds(){return inds;}
+   void kickCenter();
 private:
    std::vector<float> verts;
    std::vector<float> norms;

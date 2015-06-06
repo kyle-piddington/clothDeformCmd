@@ -14,7 +14,7 @@ res(res)
    {
       for(int i = 0; i < res; i++)
       {
-         verts.push_back(i*((float)w/(res-1)) - w/2.0);
+         verts.push_back(-i*((float)w/(res-1)) + w/2.0);
          verts.push_back(0);
          verts.push_back(j*((float)h/(res-1)) - h/2.0);
          
@@ -195,6 +195,7 @@ void Cloth::step(double dt)
    for(int i = 0; i < res; i++)
    {
       lockedVerts.push_back(i);
+      lockedVerts.push_back(res*(res-1) + i);
       //lockedVerts.push_back(res-1 - i);
    }
    integrator->step(dt,&verts[0],lockedVerts);
@@ -225,6 +226,21 @@ Eigen::Vector3d Cloth::getVert(int vertIdx)
    return Eigen::Vector3d(verts[3*vertIdx],
                           verts[3*vertIdx + 1],
                           verts[3*vertIdx +2]);
+}
+
+void Cloth::kickCenter()
+{
+   std::vector<int> pushVerts;
+   pushVerts.push_back(res*res/2 + res/2);
+   pushVerts.push_back(res*res/2 + res/2 - 1);
+   pushVerts.push_back(res*res/2 + res/2 - 2);
+   pushVerts.push_back(res*res/2 + res/2 + 1);
+   pushVerts.push_back(res*res/2 + res/2 + 2);
+   pushVerts.push_back(res*res/2 + res/2 - res);
+   pushVerts.push_back(res*res/2 + res/2 + res);
+   pushVerts.push_back(res*res/2 + res/2 - 2*res );
+   pushVerts.push_back(res*res/2 + res/2 + 2*res );
+   integrator->addForce(pushVerts,Eigen::Vector3d(0,8000,0)) ; 
 }
 
 

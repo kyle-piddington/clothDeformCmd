@@ -1,15 +1,17 @@
 #include "ClothForceIntegrator.h"
-#define YOUNG_MOD 8000.0 //N/m
-#define POISSON_DISTRB 0.65
+#define YOUNG_MOD 5000.0 //N/m
+#define POISSON_COEFF 0.65
 #define MASS 1.0 //kg/m
 #define GRAVITY -0.5
-#define DAMPN  0.15
+#define DAMPN  0.35
 #define COLLISIONSTR 20.0
 #include <algorithm>
 #include <iostream>
+
 //#include <omp.h>
 
-const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_DISTRB * POISSON_DISTRB);
+const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
+
 /**
  * Push the force derivative structure to the Phi
  */
@@ -19,13 +21,7 @@ struct Vector
    double y;
    double z;
 };
-struct ForceDerivative
-{
-   double h0;
-   double h1;
-   double h2;
-   double h3;
-};
+
 
 //OFFLOAD METHODS
 //(THESE SHOULD BE OFFLOADABLE)
@@ -57,9 +53,9 @@ inline Vector calculateForce(Vector U, Vector V,
 
 
    Vector sigmas;
-   sigmas.x = euu + POISSON_DISTRB*evv ;
-   sigmas.y = POISSON_DISTRB*evv + euu ;
-   sigmas.z = euv * (1 - POISSON_DISTRB) / 2 ;
+   sigmas.x = euu + POISSON_COEFF * evv ;
+   sigmas.y = POISSON_COEFF*evv + euu ;
+   sigmas.z = euv * (1 - POISSON_COEFF) / 2 ;
 
    sigmas.x *= YoungPoissonMatrixScalar;
    sigmas.y *= YoungPoissonMatrixScalar;
@@ -174,18 +170,16 @@ void ClothForceIntegrator::init(Cloth & cloth)
    std::fill(velsY, velsY + numVerts, 0);
    std::fill(velsZ, velsZ + numVerts, 0);
 
+   std::fill(forceX, forceX + numVerts, 0);
+   std::fill(forceY, forceY + numVerts, 0);
+   std::fill(forceZ, forceZ + numVerts, 0);
+
 
    memcpy(indicies,cloth.getInds().data(), sizeof(int)*cloth.getInds().size());
    caluclateTriangleWeights(cloth);
 }
 void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<int> & lockedVerts )
 {
-
-   std::fill(forceX, forceX + numVerts, 0);
-   std::fill(forceY, forceY + numVerts, 0);
-   std::fill(forceZ, forceZ + numVerts, 0);
-
-
 
    time += dt;
    //Calculate a force vector
@@ -223,8 +217,6 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
       Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
 
-      
-
       Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
       Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
       Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
@@ -250,26 +242,7 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
     */
    for(int i = 0; i < numVerts; i++)
    {
-      /*
-      for(int j = i; j < numVerts; j++)
-      {
-         Vector dist;
-         dist.x = velsX[j] - velsX[i];
-         dist.y = velsY[j] - velsY[i];
-         dist.z = velsZ[j] - velsZ[i];
-         if (lengthSq(dist) < 0.00002)
-         {
-            forceX[i] += COLLISIONSTR * -dist.x;
-            forceX[j] += COLLISIONSTR * dist.x;
-            forceY[i] += COLLISIONSTR * -dist.y;
-            forceY[j] += COLLISIONSTR * dist.y;
-            forceZ[i] += COLLISIONSTR * -dist.z;
-            forceZ[j] += COLLISIONSTR * dist.z;
-         }
-      }
-      */
       forceY[i] += GRAVITY;
-
    }
    for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
    {
@@ -313,13 +286,28 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       }
       printf("\n\n");
    }
+
    */
+
+   std::fill(forceX, forceX + numVerts, 0);
+   std::fill(forceY, forceY + numVerts, 0);
+   std::fill(forceZ, forceZ + numVerts, 0);
+
 
    //Write to output vertices
 
    
 }
+void ClothForceIntegrator::addForce(std::vector<int> verts, Eigen::Vector3d force)
+{
+   for (std::vector<int>::iterator i = verts.begin(); i != verts.end(); ++i)
+   {
+      forceX[*i] = force.x();
+      forceY[*i] = force.y();
+      forceZ[*i] = force.z();
 
+   }
+}
 ClothForceIntegrator::~ClothForceIntegrator()
 {
    delete [] wUA ;
