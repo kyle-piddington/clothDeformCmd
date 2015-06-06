@@ -17,41 +17,23 @@
 #include <vector>
 
 
-typedef struct Triangle
-{
-   glm::vec3 vertA;
-   int idxA;
-   glm::vec3 vertB;
-   int idxB;
-   glm::vec3 vertC;
-   int idxC;
-}Triangle;
-
-
-typedef struct Weights{
-   float d;
-   float ua;
-   float va;
-   float ub;
-   float vb;
-   float uc;
-   float vc;
-
-}Weights;
-
 
 class Cloth
 {
 public:
-   Cloth(int w, int h, int res, float youngMod = 1000.0f, float poissonCoeff = 0.0f, float dampening = 0.0f);
+   Cloth(int w, int h, int res);
    ~Cloth();
    void bind();
    void init();
    void draw(GLint h_pos, GLint h_nor, GLint h_tex);
    void step(float time);
+   glm::vec2 getUV(int vertIdx);
+   glm::vec3 getVert(int vertIdx);
+   int getNumVerts(){return verts.size();}
+   int getNumTriangles(){return numTriangles;}
+   std::vector<int> getInds(){return inds;}
 private:
    std::vector<float> verts;
-   std::vector<float> velocities;
    std::vector<float> norms;
    std::vector<float> tex;
    std::vector<int> inds;
@@ -62,24 +44,7 @@ private:
    GLuint texBufID;
    void rebindNorms();
    void rebindVerts();
-   void precalc();
 
-   //weights calculated in precalc
-   std::vector<Triangle> triList;
-   std::vector<Weights> triWeights;
-   //Cheaper to allocate here than every frame
-   std::vector<float> forces;
-   //Inline helper methods
-   inline glm::vec2 getUV(int vertIdx);
-   inline glm::vec3 getVert(int vertIdx);
-   inline Triangle getTriangle(int triangleNumber);
-   Weights precalcTriangle(Triangle t);
-   void integrateForces(float dt);
-   float t;
-
-   float youngMod;
-   float poissonCoeff;
-   float dampening;
 
 };
 

@@ -1,6 +1,6 @@
 #include "Cloth.h"
 #include "RK4.h"
-Cloth::Cloth(int w, int h, int res, float youngMod, float poissonCoeff, float dampening) :
+Cloth::Cloth(int w, int h, int res) :
 posBufID(0),
 norBufID(0),
 indBufID(0),
@@ -34,14 +34,6 @@ texBufID(0)
    }
 
    numTriangles = inds.size()/3;
-   for(int i = 0; i < numTriangles; i++)
-   {
-      Triangle tris = getTriangle(i);
-      triList.push_back(tris);
-      triWeights.push_back(precalcTriangle(tris));
-   }
-   forces.resize(verts.size());
-   velocities.resize(verts.size());
 }
 Cloth::~Cloth()
 {
@@ -49,35 +41,6 @@ Cloth::~Cloth()
 
 }
 
-//set constants for each triangle.  an individual point will have different constants for each triangle it's part of
-Weights Cloth::precalcTriangle(Triangle t){
-   //get uvs
-   glm::vec2 a = getUV(t.idxA);
-   glm::vec2 b = getUV(t.idxB);
-   glm::vec2 c = getUV(t.idxC);
-
-   //create and set weights
-   Weights w;
-   w.d = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
-   float recrip = 1.0 / w.d;
-
-   w.ua = (b.y - c.y) * recrip;
-   w.va = (c.x - b.x) * recrip;
-   w.ub = (c.y - a.y) * recrip;
-   w.vb = (a.x - c.x) * recrip;
-   w.uc = (a.y - b.y) * recrip;
-   w.vc = (b.x - a.y) * recrip;
-   //calculate for every triangle.
-   return w;
-}
-
-//Precalculate all triangles
-void Cloth::precalc(){
-   for(int i = 0; i < numTriangles; i++){
-      triList.push_back(getTriangle(i));
-      triWeights.push_back( precalcTriangle(triList.back()) );
-   }
-}
 
 /**
  * Generate the initial buffers
@@ -224,39 +187,11 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 void Cloth::step(float dt)
 {
 
-  /**
-   * Physics Code Hither
-   */
-   integrateForces(dt);
    rebindVerts();
    rebindNorms();
 }
 
 
-/**
- * Use RK4 integration of force
- * @param dt delta time
- */
-void Cloth::integrateForces(float dt)
-{
-   for(int i = 0; i < verts.size(); i+=3)
-   {
-      RK4Solver::State vertState;
-      vertState.pos = glm::vec3(verts[i],verts[i+1],verts[i+2] );
-      vertState.vel = glm::vec3(velocities[i],velocities[i+1],velocities[i+2]);
-      vertState.nextForce =
-       glm::vec3(forces[i],forces[i+1],forces[i+2]);
-      vertState.mass = 100.0/verts.size();
-      RK4Solver::integrate(vertState, t, dt);
-      verts[i] = vertState.pos.x;
-      verts[i+1] = vertState.pos.y;
-      verts[i+2] = vertState.pos.z;
-      velocities[i] = vertState.vel.x;
-      velocities[i+1] = vertState.vel.y;
-      velocities[i+2] = vertState.vel.z;
-
-   }
-}
 
 /**
  * Retrieve the UV value of a vertex
@@ -280,21 +215,4 @@ inline glm::vec3 Cloth::getVert(int vertIdx)
                     verts[3*vertIdx +2]);
 }
 
-/**
- * Retrieve a triangle from a vertex
- * @param triangleNumber the triangle number
- */
-inline Triangle Cloth::getTriangle(int triangleNumber)
-{
-   int idx1 = inds[3*triangleNumber];
-   int idx2 = inds[3*triangleNumber + 1];
-   int idx3 = inds[3*triangleNumber + 2];
-   Triangle tris;
-   tris.vertA = getVert(idx1);
-   tris.idxA = idx1;
-   tris.vertB = getVert(idx2);
-   tris.idxB = idx2;
-   tris.vertC = getVert(idx3);
-   tris.idxC = idx3;
-   return tris;
-}
+
