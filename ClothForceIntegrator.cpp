@@ -1,9 +1,10 @@
 #include "ClothForceIntegrator.h"
-#define YOUNG_MOD 3000.0 //N/m
-#define POISSON_DISTRB 0.5
-#define MASS 3.0 //kg/m
-#define GRAVITY 1.0
-#define DAMPN  0.00015
+#define YOUNG_MOD 8000.0 //N/m
+#define POISSON_DISTRB 0.65
+#define MASS 1.0 //kg/m
+#define GRAVITY -0.5
+#define DAMPN  0.15
+#define COLLISIONSTR 20.0
 #include <algorithm>
 #include <iostream>
 const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_DISTRB * POISSON_DISTRB);
@@ -42,7 +43,7 @@ inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
 
 
 
-inline Vector calculateForce(Vector U, Vector V, Vector dU, Vector dV,
+inline Vector calculateForce(Vector U, Vector V,
                              double rUJ, double rVJ, double d)
 {
    double euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
@@ -75,7 +76,7 @@ inline Vector calculateForce(Vector U, Vector V, Vector dU, Vector dV,
    force.z = -fabs(d)/2 * (
                sigmas.x * rUJ * U.z +
                sigmas.y * rVJ * V.z +
-               sigmas.z * (rUJ * V.z + rVJ * U.z));
+               sigmas.z * (rUJ * V.z + rVJ * U.z)) ;
    return force;
 }
 
@@ -123,6 +124,10 @@ inline void caluclatePositionsAtTime(double * vertsX, double * vertsY, double * 
    }
 }
 
+inline double lengthSq(Vector v)
+{
+   return v.x * v.x + v.y * v.y + v.z * v.z;
+}
 
 
 /**
@@ -215,34 +220,54 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
       Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
 
-      Vector dU = sumPoint(vA,vB,vC,wUA[i],wUB[i],wUC[i]);
-      Vector dV = sumPoint(vA,vB,vC,wVA[i],wVB[i],wVC[i]);
+      
 
-
-      Vector forceA = calculateForce(U,V,dU,dV,wUA[i],wVA[i],dArray[i]);
-      Vector forceB = calculateForce(U,V,dU,dV,wUB[i],wVB[i],dArray[i]);
-      Vector forceC = calculateForce(U,V,dU,dV,wUC[i],wVC[i],dArray[i]);
+      Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+      Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
+      Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
       //Update first vertex
-      forceX[indicies[i*3]] += forceA.x;
-      forceY[indicies[i*3]] += forceA.y;
-      forceZ[indicies[i*3]] += forceA.z;
+      forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
+      forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
+      forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
 
       //Update second vertex
-      forceX[indicies[i*3+1]] += forceB.x;
-      forceY[indicies[i*3+1]] += forceB.y;
-      forceZ[indicies[i*3+1]] += forceB.z;
+      forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
+      forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
+      forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
 
       //update third vertex
-      forceX[indicies[i*3 + 2]] += forceC.x;
-      forceY[indicies[i*3 + 2]] += forceC.y;
-      forceZ[indicies[i*3 + 2]] += forceC.z;
+      forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
+      forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.x;
+      forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.x;
 
    }
 
+   /**
+    * Cloth-self-intersection test
+    */
    for(int i = 0; i < numVerts; i++)
    {
+      /*
+      for(int j = i; j < numVerts; j++)
+      {
+         Vector dist;
+         dist.x = velsX[j] - velsX[i];
+         dist.y = velsY[j] - velsY[i];
+         dist.z = velsZ[j] - velsZ[i];
+         if (lengthSq(dist) < 0.00002)
+         {
+            forceX[i] += COLLISIONSTR * -dist.x;
+            forceX[j] += COLLISIONSTR * dist.x;
+            forceY[i] += COLLISIONSTR * -dist.y;
+            forceY[j] += COLLISIONSTR * dist.y;
+            forceZ[i] += COLLISIONSTR * -dist.z;
+            forceZ[j] += COLLISIONSTR * dist.z;
+         }
+      }
+      */
       forceY[i] += GRAVITY;
+
    }
    for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
    {

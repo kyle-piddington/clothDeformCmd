@@ -192,8 +192,11 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 void Cloth::step(double dt)
 {
    std::vector<int> lockedVerts;
-   lockedVerts.push_back(0);
-   lockedVerts.push_back(res-1);
+   for(int i = 0; i < res; i++)
+   {
+      lockedVerts.push_back(i);
+      //lockedVerts.push_back(res-1 - i);
+   }
    integrator->step(dt,&verts[0],lockedVerts);
    rebindVerts();
    rebindNorms();
