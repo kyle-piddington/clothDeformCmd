@@ -23,16 +23,16 @@
 #include "Cloth.h"
 #include <memory>
 
-
+#define TIMESTEP 0.0005;
 using namespace std;
 bool keyToggles[256];
-float t = 0, dt = 0;
+double t = 0, dt = 0;
 Camera camera;
 Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(1,1,10);
+Cloth testCloth(0.5,0.5,4);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
@@ -222,7 +222,7 @@ void keyboardGL(unsigned char key, int x, int y)
 			exit(0);
 			break;
 		case 's':
-			dt = 1/120.0f;
+			dt = 1/60.0;
 			t += dt;
 			update(dt);
 
@@ -244,6 +244,12 @@ void keyboardGL(unsigned char key, int x, int y)
 }
 void idleGL()
 {
+		if(keyToggles[' '])
+		{
+		dt = TIMESTEP
+		t += dt;
+		update(dt);
+		}
 		glutPostRedisplay();
 }
 

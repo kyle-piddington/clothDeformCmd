@@ -1,15 +1,14 @@
 #include "ClothForceIntegrator.h"
 #define YOUNG_MOD 1000.0 //N/m
 #define POISSON_DISTRB 0.0
-#define MASS 10.0 //kg/m
-#define GRAVITY 9.8
+#define MASS 20.0 //kg/m
+#define GRAVITY 1.0
 #include <algorithm>
 #include <iostream>
 const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_DISTRB * POISSON_DISTRB);
 /**
  * Push the force derivative structure to the Phi
  */
-#pragma offload_attribute (push,target(mic))
 struct Vector
 {
    double x;
@@ -29,7 +28,7 @@ struct ForceDerivative
 
 
 
-inline struct Vector sumU(Vector & a, Vector & b, Vector & c,
+inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
                           double  wUA, double  wUB, double  wUC)
 {
 
@@ -39,16 +38,7 @@ inline struct Vector sumU(Vector & a, Vector & b, Vector & c,
    point.z = a.z * wUA + b.z * wUB + c.z * wUC;
    return point;
 }
-inline struct Vector sumV(Vector & a, Vector & b, Vector & c,
-                         double  wVA, double  wVB, double  wVC)
-{
 
-   struct Vector point;
-   point.x = a.x * wVA + b.x * wVB + c.x * wVC;
-   point.y = a.y * wVA + b.y * wVB + c.y * wVC;
-   point.z = a.z * wVA + b.z * wVB + c.z * wVC;
-   return point;
-}
 
 
 inline Vector calculateForce(Vector U, Vector V, double rUJ, double rVJ, double d)
@@ -62,21 +52,25 @@ inline Vector calculateForce(Vector U, Vector V, double rUJ, double rVJ, double 
    sigmas.x = euu + POISSON_DISTRB*evv;
    sigmas.y = POISSON_DISTRB*evv + euu;
    sigmas.z = euv * (1 - POISSON_DISTRB) / 2;
+
+   sigmas.x *= YoungPoissonMatrixScalar;
+   sigmas.y *= YoungPoissonMatrixScalar;
+   sigmas.z *= YoungPoissonMatrixScalar;
    Vector force;
-   force.x = -abs(d)/2 *
+   force.x = -fabs(d)/2 *(
                sigmas.x * rUJ * U.x +
                sigmas.y * rVJ * V.x +
-               sigmas.z * (rUJ * V.x + rVJ * U.x);
+               sigmas.z * (rUJ * V.x + rVJ * U.x));
 
-   force.y = -abs(d)/2 *
+   force.y = -fabs(d)/2 * (
                sigmas.x * rUJ * U.y +
                sigmas.y * rVJ * V.y +
-               sigmas.z * (rUJ * V.y + rVJ * U.y);
+               sigmas.z * (rUJ * V.y + rVJ * U.y));
 
-   force.z = -abs(d)/2 *
+   force.z = -fabs(d)/2 * (
                sigmas.x * rUJ * U.z +
                sigmas.y * rVJ * V.z +
-               sigmas.z * (rUJ * V.z + rVJ * U.z);
+               sigmas.z * (rUJ * V.z + rVJ * U.z));
    return force;
 }
 
@@ -100,13 +94,13 @@ inline void ClothForceIntegrator::caluclateTriangleWeights(Cloth & cloth)
       //create and set weights
       float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
       float recrip = 1.0 /  d;
-
+      dArray[i/3] = d;
       wUA[i/3] = (b.y() - c.y()) * recrip;
       wVA[i/3] = (c.x() - b.x()) * recrip;
       wUB[i/3] = (c.y() - a.y()) * recrip;
       wVB[i/3] = (a.x() - c.x()) * recrip;
       wUC[i/3] = (a.y() - b.y()) * recrip;
-      wVC[i/3] = (b.x() - a.y()) * recrip;
+      wVC[i/3] = (b.x() - a.x()) * recrip;
    }
 
 }
@@ -143,7 +137,6 @@ void ClothForceIntegrator::init(Cloth & cloth)
    wVA = new double[cloth.getNumTriangles()];
    wVB = new double[cloth.getNumTriangles()];
    wVC = new double[cloth.getNumTriangles()];
-   wUA = new double[cloth.getNumTriangles()];
    dArray = new double[cloth.getNumTriangles()];
    numVerts = cloth.getNumVerts();
    vertsX = new double[cloth.getNumVerts()];
@@ -202,31 +195,35 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       B.z = vertsZ[indicies[i*3 + 1]];
       C.z = vertsZ[indicies[i*3 + 2]];
 
-      Vector U = sumU(A,B,C,wUA[i],wUB[i],wUC[i]);
-      Vector V = sumU(A,B,C,wVA[i],wVB[i],wVC[i]);
+      Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
+      Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
+
 
       Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
-      Vector forceB = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
-      Vector forceC = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+      Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
+      Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
       //Update first vertex
       forceX[indicies[i*3]] += forceA.x;
-      forceY[indicies[i*3]] += forceA.x;
-      forceZ[indicies[i*3]] += forceA.x;
+      forceY[indicies[i*3]] += forceA.y;
+      forceZ[indicies[i*3]] += forceA.z;
 
       //Update second vertex
       forceX[indicies[i*3+1]] += forceB.x;
-      forceY[indicies[i*3+1]] += forceB.x;
-      forceZ[indicies[i*3+1]] += forceB.x;
+      forceY[indicies[i*3+1]] += forceB.y;
+      forceZ[indicies[i*3+1]] += forceB.z;
 
       //update third vertex
       forceX[indicies[i*3 + 2]] += forceC.x;
-      forceY[indicies[i*3 + 2]] += forceC.x;
-      forceZ[indicies[i*3 + 2]] += forceC.x;
+      forceY[indicies[i*3 + 2]] += forceC.y;
+      forceZ[indicies[i*3 + 2]] += forceC.z;
 
    }
 
-
+   for(int i = 0; i < numVerts; i++)
+   {
+      forceY[i] += GRAVITY;
+   }
    for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
    {
       forceX[*i]=0;

@@ -23,12 +23,12 @@ class ClothForceIntegrator;
 class Cloth
 {
 public:
-   Cloth(int w, int h, int res);
+   Cloth(float w, float h, int res);
    ~Cloth();
    void bind();
    void init();
    void draw(GLint h_pos, GLint h_nor, GLint h_tex);
-   void step(float time);
+   void step(double time);
    Eigen::Vector2d getUV(int vertIdx);
    Eigen::Vector3d getVert(int vertIdx);
    int getNumVerts(){return verts.size()/3;}

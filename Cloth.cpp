@@ -2,7 +2,7 @@
 #include "RK4.h"
 #include "ClothForceIntegrator.h"
 
-Cloth::Cloth(int w, int h, int res) :
+Cloth::Cloth(float w, float h, int res) :
 posBufID(0),
 norBufID(0),
 indBufID(0),
@@ -15,8 +15,9 @@ res(res)
       for(int i = 0; i < res; i++)
       {
          verts.push_back(i*((float)w/(res-1)) - w/2.0);
-         verts.push_back(-j*((float)h/(res-1)) + h/2.0);
          verts.push_back(0);
+         verts.push_back(j*((float)h/(res-1)) - h/2.0);
+         
          tex.push_back((float)i/(res-1));
          tex.push_back((float)j/(res-1));
 
@@ -188,7 +189,7 @@ void Cloth::draw(GLint h_pos, GLint h_nor, GLint h_tex)
 
 
 
-void Cloth::step(float dt)
+void Cloth::step(double dt)
 {
    std::vector<int> lockedVerts;
    lockedVerts.push_back(0);
@@ -207,7 +208,6 @@ void Cloth::step(float dt)
  */
 Eigen::Vector2d Cloth::getUV(int vertIdx)
 {
-    std::cout << vertIdx << " ";
      
    return Eigen::Vector2d(tex[vertIdx*2],tex[vertIdx*2+1]);
 }
