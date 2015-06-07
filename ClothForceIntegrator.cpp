@@ -242,6 +242,8 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 
    #endif
 
+   cout << "offloaded some stuff" << endl;
+
    for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
       const double dt = MIN_STEP;
@@ -314,9 +316,9 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	   }
 	   for(int i = 0; i < numLockedVerts; ++i)
 	   {
-		  forceX[i]=0;
-		  forceY[i]=0;
-		  forceZ[i]=0;
+		  forceX[lockedVerts[i]]=0;
+		  forceY[lockedVerts[i]]=0;
+		  forceZ[lockedVerts[i]]=0;
 
 	   }
 
@@ -331,10 +333,14 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  velsZ[i]  += forceZ[i] * dt * recipMass;
 		  vertsZ[i] += velsZ[i] * dt;
 	   }
+
+      for(int i = 0; i < numVerts; i++) {
+         forceX[i] = forceY[i] = forceZ[i] = 0;
+      }
 	   
-	   memset(forceX, numVerts * sizeof(double), 0);
-	   memset(forceY, numVerts * sizeof(double), 0);
-	   memset(forceZ, numVerts * sizeof(double), 0);
+	   // memset(forceX, numVerts * sizeof(double), 0);
+	   // memset(forceY, numVerts * sizeof(double), 0);
+	   // memset(forceZ, numVerts * sizeof(double), 0);
    }
    /**
 	* Set final vertex positions
