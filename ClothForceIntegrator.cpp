@@ -212,8 +212,7 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 {
    const double dt = MIN_STEP;
    //Calculate a force vector
-   std::cout << "Taking " + (int)stepAmnt/MIN_STEP << "Steps" <<  std::endl;
-   for(int steps = 0; steps < (int)stepAmnt/MIN_STEP; steps++)
+   for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
 	   #pragma omp parallel for
 	   for(int i = 0; i < numTriangles; i++)
