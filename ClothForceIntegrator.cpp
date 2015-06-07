@@ -38,7 +38,7 @@ struct Vector
 
 void ClothForceIntegrator::rebind(std::vector<float> vertices)
 {
-   for(int i = 0; i < vertices.size(); i++)
+   for(int i = 0; i < vertices.size()/3; i++)
    {
 
       vertsX[i] = vertices[3*i];
