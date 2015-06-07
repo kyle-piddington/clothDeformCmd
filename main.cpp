@@ -26,13 +26,14 @@
 #define TIMESTEP 0.0005
 using namespace std;
 bool keyToggles[256];
+bool keyDowns[256];
 double t = 0, dt = 0;
 Camera camera;
 Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(8,8,64);
+Cloth testCloth(8,8,256);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
@@ -211,12 +212,16 @@ void motionGL(int x, int y)
 	glutPostRedisplay();
 }
 
-
+void keyboardUpGL(unsigned char key, int x, int y)
+{
+   keyDowns[key] = false;
+}
 
 void keyboardGL(unsigned char key, int x, int y)
 {
 	keyToggles[key] = !keyToggles[key];
-	switch(key) {
+	keyDowns[key] = true;
+   switch(key) {
 		case 27:
 			// ESCAPE
 			exit(0);
@@ -224,12 +229,6 @@ void keyboardGL(unsigned char key, int x, int y)
 		case 's':
 			
 			update(dt);
-			break;
-		case 'w':
-			testCloth.expand(0.1);
-			break;
-		case 'W':
-			testCloth.expand(-0.1);
 			break;
 		case 'k':
 			testCloth.kickCenter();
@@ -256,7 +255,16 @@ void idleGL()
 	static int frame = 0, time, timebase = 0;	// for fps
 	
 	frame++; // calc fps
-	
+   
+   if(keyDowns['e'])
+   {
+      testCloth.expand(-0.1);
+   }
+   else if(keyDowns['w'])
+   {
+      testCloth.expand(0.1);
+   }
+
 	if(keyToggles[' '])
 	{
 		for(int i = 0; i < (int)(1/(60.0)/TIMESTEP); i++)
@@ -291,7 +299,8 @@ int main(int argc, char **argv)
 	glutMouseFunc(mouseGL);
 	glutMotionFunc(motionGL);
 	glutKeyboardFunc(keyboardGL);
-	glutReshapeFunc(reshapeGL);
+   glutKeyboardUpFunc(keyboardUpGL);
+   glutReshapeFunc(reshapeGL);
 	glutDisplayFunc(drawGL);
 	glutIdleFunc(idleGL);
 	initGL();
