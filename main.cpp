@@ -32,7 +32,7 @@ Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(0.5,0.5,20);
+Cloth testCloth(0.5,0.5,64);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
@@ -244,18 +244,36 @@ void keyboardGL(unsigned char key, int x, int y)
 	// Refresh screen
 	glutPostRedisplay();
 }
+
 void idleGL()
 {
-		if(keyToggles[' '])
+	static int frame = 0, time, timebase = 0;	// for fps
+	
+	frame++; // calc fps
+	
+	if(keyToggles[' '])
+	{
+		for(int i = 0; i < (int)(1/(60.0)/TIMESTEP); i++)
 		{
-			for(int i = 0; i < (int)(1/(60.0)/TIMESTEP); i++)
-			{
-				dt = TIMESTEP;
-				t += dt;
-				update(dt);
-			}
+			dt = TIMESTEP;
+			t += dt;
+			update(dt);
+
 		}
-		glutPostRedisplay();
+	}
+	glutPostRedisplay();
+	
+	// calc fps
+	time = glutGet(GLUT_ELAPSED_TIME);
+			
+	if (time - timebase > 1000)
+	{
+		double fps = frame * 1000.0 / (time - timebase);
+		timebase = time;
+		frame = 0;
+		
+		printf("fps: %lf\n", fps);
+	}
 }
 
 int main(int argc, char **argv)
