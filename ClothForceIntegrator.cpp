@@ -213,39 +213,46 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    //Calculate a force vector
 
    int numLockedVerts = theLockedVerts.size();
-   int *lockedVerts = theLockedVerts.data();
+   int *lockedVerts = new int[numLockedVerts];
+   memcpy(lockedVerts, theLockedVerts.data(), numLockedVerts * sizeof(int));
+
+   std::cout << "sup, bitches" << std::endl;
+   std::cout << "numVerts: " << numVerts << std::endl;
+   std::cout << "outputVertices: " << outputVertices << std::endl;
+   std::cout << "vertsX: " << vertsX << std::endl;
+   std::cout << "vertsY: " << vertsY << std::endl;
+   std::cout << "vertsZ: " << vertsZ << std::endl;
 
    #ifdef OFFLOAD
    #pragma offload target(mic)\
-      nocopy(wUA: length(numTriangles) REUSE RETAIN)\
-      nocopy(wUB: length(numTriangles) REUSE RETAIN)\
-      nocopy(wUC: length(numTriangles) REUSE RETAIN)\
-      nocopy(wVA: length(numTriangles) REUSE RETAIN)\
-      nocopy(wVB: length(numTriangles) REUSE RETAIN)\
-      nocopy(wVC: length(numTriangles) REUSE RETAIN)\
-      nocopy(dArray: length(numVerts) REUSE RETAIN)\
-      out(vertsX: length(numVerts) REUSE RETAIN)\
-      out(vertsY: length(numVerts) REUSE RETAIN)\
-      out(vertsZ: length(numVerts) REUSE RETAIN)\
-      nocopy(velsX: length(numVerts) REUSE RETAIN)\
-      nocopy(velsY: length(numVerts) REUSE RETAIN)\
-      nocopy(velsZ: length(numVerts) REUSE RETAIN)\
-      nocopy(forceX: length(numVerts) REUSE RETAIN)\
-      nocopy(forceY: length(numVerts) REUSE RETAIN)\
-      nocopy(forceZ: length(numVerts) REUSE RETAIN)\
-      nocopy(indicies: length(numTriangles*3) REUSE RETAIN)\
+      in/*FIXME*/(wUA: length(numTriangles) REUSE RETAIN)\
+      in/*FIXME*/(wUB: length(numTriangles) REUSE RETAIN)\
+      in/*FIXME*/(wUC: length(numTriangles) REUSE RETAIN)\
+      in/*FIXME*/(wVA: length(numTriangles) REUSE RETAIN)\
+      in/*FIXME*/(wVB: length(numTriangles) REUSE RETAIN)\
+      in/*FIXME*/(wVC: length(numTriangles) REUSE RETAIN)\
+      in/*FIXME*/(dArray: length(numVerts) REUSE RETAIN)\
+      inout(vertsX: length(numVerts) REUSE RETAIN)\
+      inout(vertsY: length(numVerts) REUSE RETAIN)\
+      inout(vertsZ: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(velsX: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(velsY: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(velsZ: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(forceX: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(forceY: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(forceZ: length(numVerts) REUSE RETAIN)\
+      in/*FIXME*/(indicies: length(numTriangles*3) REUSE RETAIN)\
       in(stepAmnt)\
       in(numTriangles)\
       in(numVerts)\
       in(lockedVerts: length(numLockedVerts))\
       in(numLockedVerts)
-
    #endif
-
-   cout << "offloaded some stuff" << endl;
-
    for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
+      // std::cout << "offloaded some stuff" << std::endl;
+      printf(" offloaded some stuff\n");
+
       const double dt = MIN_STEP;
       const double recipMass = 1/(MASS/numVerts);
 
@@ -310,6 +317,7 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
 	   }
 
+
 	   for(int i = 0; i < numVerts; i++)
 	   {
 		  forceY[i] += GRAVITY;
@@ -342,6 +350,13 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	   // memset(forceY, numVerts * sizeof(double), 0);
 	   // memset(forceZ, numVerts * sizeof(double), 0);
    }
+
+   std::cout << "didn't die" << std::endl;
+   std::cout << "numVerts: " << numVerts << std::endl;
+   std::cout << "outputVertices: " << outputVertices << std::endl;
+   std::cout << "vertsX: " << vertsX << std::endl;
+   std::cout << "vertsY: " << vertsY << std::endl;
+   std::cout << "vertsZ: " << vertsZ << std::endl;
    /**
 	* Set final vertex positions
 	*/
@@ -352,6 +367,8 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	  outputVertices[i*3+2] = (float)vertsZ[i];  
    }
  
+   std::cout << "didn't die the sequel" << std::endl;  
+
    //Print data for debugging.  But FP error...
    /*
    if(time < 2.0){
