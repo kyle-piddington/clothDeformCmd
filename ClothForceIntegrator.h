@@ -17,9 +17,11 @@ public:
    void step(double dt, float * outputVertices, std::vector<int> & lockedVerts);
    void addForce(std::vector<int> verts, Eigen::Vector3d force);
    void rebind(std::vector<float> vertices);
-   void bind();
+   void startOffload();
+   void endOffload();
 private:
    inline void caluclateTriangleWeights( std::vector<float> & weights, std::vector<int> & inds);
+   void bind();
 
    /**
     * An array of weights organized per triangle.

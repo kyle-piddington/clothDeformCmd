@@ -14,7 +14,7 @@
 #define FREE free_if(1)
 #define RETAIN free_if(0)
 #define REUSE alloc_if(0)
-
+#define MIN_STEP 0.0005 //Seconds
 
 
 //#include <omp.h>
@@ -41,13 +41,13 @@ void ClothForceIntegrator::rebind(std::vector<float> vertices)
    for(int i = 0; i < vertices.size()/3; i++)
    {
 
-      vertsX[i] = vertices[3*i];
-      vertsY[i] = vertices[3*i+1];
-      vertsZ[i] = vertices[3*i+2];
+	  vertsX[i] = vertices[3*i];
+	  vertsY[i] = vertices[3*i+1];
+	  vertsZ[i] = vertices[3*i+2];
    }
 }
 inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
-                          double  wUA, double  wUB, double  wUC)
+						  double  wUA, double  wUB, double  wUC)
 {
 
    struct Vector point;
@@ -60,7 +60,7 @@ inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
 
 
 inline Vector calculateForce(Vector U, Vector V,
-                             double rUJ, double rVJ, double d)
+							 double rUJ, double rVJ, double d)
 {
    double euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
    double evv = 0.5 * (V.x * V.x + V.y * V.y + V.z * V.z -1);
@@ -80,19 +80,19 @@ inline Vector calculateForce(Vector U, Vector V,
    sigmas.z *= YoungPoissonMatrixScalar;
    Vector force;
    force.x = -fabs(d)/2 *(
-               sigmas.x * rUJ * U.x +
-               sigmas.y * rVJ * V.x +
-               sigmas.z * (rUJ * V.x + rVJ * U.x));
+			   sigmas.x * rUJ * U.x +
+			   sigmas.y * rVJ * V.x +
+			   sigmas.z * (rUJ * V.x + rVJ * U.x));
 
    force.y = -fabs(d)/2 * (
-               sigmas.x * rUJ * U.y +
-               sigmas.y * rVJ * V.y +
-               sigmas.z * (rUJ * V.y + rVJ * U.y));
+			   sigmas.x * rUJ * U.y +
+			   sigmas.y * rVJ * V.y +
+			   sigmas.z * (rUJ * V.y + rVJ * U.y));
 
    force.z = -fabs(d)/2 * (
-               sigmas.x * rUJ * U.z +
-               sigmas.y * rVJ * V.z +
-               sigmas.z * (rUJ * V.z + rVJ * U.z)) ;
+			   sigmas.x * rUJ * U.z +
+			   sigmas.y * rVJ * V.z +
+			   sigmas.z * (rUJ * V.z + rVJ * U.z)) ;
    return force;
 }
 
@@ -104,25 +104,25 @@ inline void ClothForceIntegrator::caluclateTriangleWeights(std::vector<float> & 
 {
 
    /**
-    * Iterate through each triangle and calcluate a weight grouping
-    */
+	* Iterate through each triangle and calcluate a weight grouping
+	*/
    for(int i = 0; i < numTriangles*3; i+=3)
    {
-      std::cout << i << std::endl;
-      Eigen::Vector2d a = Eigen::Vector2d(weights[2*inds[i]],weights[2*inds[i]+1]);
-      Eigen::Vector2d b = Eigen::Vector2d(weights[2*inds[i+1]],weights[2*inds[i+1]+1]);
-      Eigen::Vector2d c = Eigen::Vector2d(weights[2*inds[i+2]],weights[2*inds[i+2]+1]);
-      std::cout << std::endl;
-      //create and set weights
-      float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
-      float recrip = 1.0 /  d;
-      dArray[i/3] = d;
-      wUA[i/3] = (b.y() - c.y()) * recrip;
-      wVA[i/3] = (c.x() - b.x()) * recrip;
-      wUB[i/3] = (c.y() - a.y()) * recrip;
-      wVB[i/3] = (a.x() - c.x()) * recrip;
-      wUC[i/3] = (a.y() - b.y()) * recrip;
-      wVC[i/3] = (b.x() - a.x()) * recrip;
+	  std::cout << i << std::endl;
+	  Eigen::Vector2d a = Eigen::Vector2d(weights[2*inds[i]],weights[2*inds[i]+1]);
+	  Eigen::Vector2d b = Eigen::Vector2d(weights[2*inds[i+1]],weights[2*inds[i+1]+1]);
+	  Eigen::Vector2d c = Eigen::Vector2d(weights[2*inds[i+2]],weights[2*inds[i+2]+1]);
+	  std::cout << std::endl;
+	  //create and set weights
+	  float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
+	  float recrip = 1.0 /  d;
+	  dArray[i/3] = d;
+	  wUA[i/3] = (b.y() - c.y()) * recrip;
+	  wVA[i/3] = (c.x() - b.x()) * recrip;
+	  wUB[i/3] = (c.y() - a.y()) * recrip;
+	  wVB[i/3] = (a.x() - c.x()) * recrip;
+	  wUC[i/3] = (a.y() - b.y()) * recrip;
+	  wVC[i/3] = (b.x() - a.x()) * recrip;
    }
 
 }
@@ -143,8 +143,8 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 {
 
    /**
-    * Replace with __mm_malloc later
-    */
+	* Replace with __mm_malloc later
+	*/
    numTriangles = orig_indices.size()/3;
    numVerts = vertices.size()/3;
    indicies = new int[orig_indices.size()];
@@ -169,9 +169,9 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 
    for(int i = 0; i < numVerts; i++)
    {
-      vertsX[i] = vertices[3*i];
-      vertsY[i] = vertices[3*i+1];
-      vertsZ[i] = vertices[3*i+2];
+	  vertsX[i] = vertices[3*i];
+	  vertsY[i] = vertices[3*i+1];
+	  vertsZ[i] = vertices[3*i+2];
    }
 
    std::fill(velsX, velsX + numVerts, 0);
@@ -185,152 +185,151 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 
    memcpy(indicies,orig_indices.data(), sizeof(int)*orig_indices.size());
    caluclateTriangleWeights(weights,orig_indices);
-    #ifdef OFFLOAD
-    #pragma offload_transfer target(mic)\
-        in(wUA: length(numTriangles) ALLOC RETAIN)\
-        in(wUB: length(numTriangles) ALLOC RETAIN)\
-        in(wUC: length(numTriangles) ALLOC RETAIN)\
-        in(wVA: length(numTriangles) ALLOC RETAIN)\
-        in(wVB: length(numTriangles) ALLOC RETAIN)\
-        in(wVC: length(numTriangles) ALLOC RETAIN)\
-        in(dArray: length(numVerts) ALLOC RETAIN)\
-        in(vertsX: length(numVerts) ALLOC RETAIN)\
-        in(vertsY: length(numVerts) ALLOC RETAIN)\
-        in(vertsZ: length(numVerts) ALLOC RETAIN)\
-        in(velsX: length(numVerts) ALLOC RETAIN)\
-        in(velsY: length(numVerts) ALLOC RETAIN)\
-        in(velsZ: length(numVerts) ALLOC RETAIN)\
-        in(forceX: length(numVerts) ALLOC RETAIN)\
-        in(forceY: length(numVerts) ALLOC RETAIN)\
-        in(forceZ: length(numVerts) ALLOC RETAIN)\
-        in(indicies: length(numTriangles*3) ALLOC RETAIN)
-    #endif
+	#ifdef OFFLOAD
+	#pragma offload_transfer target(mic:0)\
+		in(wUA: length(numTriangles) ALLOC RETAIN)\
+		in(wUB: length(numTriangles) ALLOC RETAIN)\
+		in(wUC: length(numTriangles) ALLOC RETAIN)\
+		in(wVA: length(numTriangles) ALLOC RETAIN)\
+		in(wVB: length(numTriangles) ALLOC RETAIN)\
+		in(wVC: length(numTriangles) ALLOC RETAIN)\
+		in(dArray: length(numVerts) ALLOC RETAIN)\
+		in(vertsX: length(numVerts) ALLOC RETAIN)\
+		in(vertsY: length(numVerts) ALLOC RETAIN)\
+		in(vertsZ: length(numVerts) ALLOC RETAIN)\
+		in(velsX: length(numVerts) ALLOC RETAIN)\
+		in(velsY: length(numVerts) ALLOC RETAIN)\
+		in(velsZ: length(numVerts) ALLOC RETAIN)\
+		in(forceX: length(numVerts) ALLOC RETAIN)\
+		in(forceY: length(numVerts) ALLOC RETAIN)\
+		in(forceZ: length(numVerts) ALLOC RETAIN)\
+		in(indicies: length(numTriangles*3) ALLOC RETAIN)
+	#endif
 
 }
 
-void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<int> & lockedVerts )
+void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & lockedVerts )
 {
-
-   time += dt;
+   const double dt = MIN_STEP;
    //Calculate a force vector
-   //
-   //EXPLICIT EULER FOR NOW, JESUS THIS IS GOING TO SUCK
-   #pragma omp parallel for
-   for(int i = 0; i < numTriangles; i++)
+   std::cout << "Taking " + (int)stepAmnt/MIN_STEP << "Steps" <<  std::endl;
+   for(int steps = 0; steps < (int)stepAmnt/MIN_STEP; steps++)
    {
-      Vector A, B, C, vA, vB, vC;
+	   #pragma omp parallel for
+	   for(int i = 0; i < numTriangles; i++)
+	   {
+		  Vector A, B, C, vA, vB, vC;
 
-      A.x = vertsX[indicies[i*3]];
-      B.x = vertsX[indicies[i*3 + 1]];
-      C.x = vertsX[indicies[i*3 + 2]];
+		  A.x = vertsX[indicies[i*3]];
+		  B.x = vertsX[indicies[i*3 + 1]];
+		  C.x = vertsX[indicies[i*3 + 2]];
 
-      A.y = vertsY[indicies[i*3]];
-      B.y = vertsY[indicies[i*3 + 1]];
-      C.y = vertsY[indicies[i*3 + 2]];
+		  A.y = vertsY[indicies[i*3]];
+		  B.y = vertsY[indicies[i*3 + 1]];
+		  C.y = vertsY[indicies[i*3 + 2]];
 
-      A.z = vertsZ[indicies[i*3]];
-      B.z = vertsZ[indicies[i*3 + 1]];
-      C.z = vertsZ[indicies[i*3 + 2]];
+		  A.z = vertsZ[indicies[i*3]];
+		  B.z = vertsZ[indicies[i*3 + 1]];
+		  C.z = vertsZ[indicies[i*3 + 2]];
 
-      vA.x = velsX[indicies[i*3]];
-      vB.x = velsX[indicies[i*3 + 1]];
-      vC.x = velsX[indicies[i*3 + 2]];
+		  vA.x = velsX[indicies[i*3]];
+		  vB.x = velsX[indicies[i*3 + 1]];
+		  vC.x = velsX[indicies[i*3 + 2]];
 
-      vA.y = velsY[indicies[i*3]];
-      vB.y = velsY[indicies[i*3 + 1]];
-      vC.y = velsY[indicies[i*3 + 2]];
+		  vA.y = velsY[indicies[i*3]];
+		  vB.y = velsY[indicies[i*3 + 1]];
+		  vC.y = velsY[indicies[i*3 + 2]];
 
-      vA.z = velsZ[indicies[i*3]];
-      vB.z = velsZ[indicies[i*3 + 1]];
-      vC.z = velsZ[indicies[i*3 + 2]];
+		  vA.z = velsZ[indicies[i*3]];
+		  vB.z = velsZ[indicies[i*3 + 1]];
+		  vC.z = velsZ[indicies[i*3 + 2]];
 
-      Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
-      Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
+		  Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
+		  Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
 
-      Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
-      Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
-      Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
+		  Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+		  Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
+		  Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
-      //Update first vertex
-      #pragma omp atomic
-      forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
-      #pragma omp atomic
-      forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
-      #pragma omp atomic
-      forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
+		  //Update first vertex
+		  #pragma omp atomic
+		  forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
+		  #pragma omp atomic
+		  forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
+		  #pragma omp atomic
+		  forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
 
-      //Update second vertex
-      #pragma omp atomic
-      forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
-      #pragma omp atomic     
-      forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
-      #pragma omp atomic
-      forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
+		  //Update second vertex
+		  #pragma omp atomic
+		  forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
+		  #pragma omp atomic     
+		  forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
+		  #pragma omp atomic
+		  forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
 
-      //update third vertex
-      #pragma omp atomic
-      forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
-      #pragma omp atomic
-      forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.y;
-      #pragma omp atomic
-      forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
+		  //update third vertex
+		  #pragma omp atomic
+		  forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
+		  #pragma omp atomic
+		  forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.y;
+		  #pragma omp atomic
+		  forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
+	   }
+
+	   for(int i = 0; i < numVerts; i++)
+	   {
+		  forceY[i] += GRAVITY;
+	   }
+	   for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
+	   {
+		  forceX[*i]=0;
+		  forceY[*i]=0;
+		  forceZ[*i]=0;
+
+	   }
+	   const double recipMass = 1/(MASS/numVerts);
+
+	   for(int i = 0; i < numVerts; i++)
+	   {
+		  velsX[i]  += forceX[i] * dt * recipMass;
+		  vertsX[i] += velsX[i] * dt;
+
+		  velsY[i]  += forceY[i] * dt * recipMass;
+		  vertsY[i] += velsY[i] * dt;
+
+		  velsZ[i]  += forceZ[i] * dt * recipMass;
+		  vertsZ[i] += velsZ[i] * dt;
+         
+
+	   }
+	   
+	   std::fill(forceX, forceX + numVerts, 0);
+	   std::fill(forceY, forceY + numVerts, 0);
+	   std::fill(forceZ, forceZ + numVerts, 0);
    }
-
    /**
-    * Cloth-self-intersection test
-    */
+	* Set final vertex positions
+	*/
    for(int i = 0; i < numVerts; i++)
    {
-      forceY[i] += GRAVITY;
-   }
-   for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
-   {
-      forceX[*i]=0;
-      forceY[*i]=0;
-      forceZ[*i]=0;
-
-   }
-   const double recipMass = 1/(MASS/numVerts);
-
-   for(int i = 0; i < numVerts; i++)
-   {
-      velsX[i]  += forceX[i] * dt * recipMass;
-      vertsX[i] += velsX[i] * dt;
-
-      velsY[i]  += forceY[i] * dt * recipMass;
-      vertsY[i] += velsY[i] * dt;
-
-      velsZ[i]  += forceZ[i] * dt * recipMass;
-      vertsZ[i] += velsZ[i] * dt;
-
-
-   }
-   /**
-    * Set final vertex positions
-    */
-   for(int i = 0; i < numVerts; i++)
-   {
-      outputVertices[i*3] = (float)vertsX[i];
-      outputVertices[i*3+1] = (float)vertsY[i];
-      outputVertices[i*3+2] = (float)vertsZ[i];  
+	  outputVertices[i*3] = (float)vertsX[i];
+	  outputVertices[i*3+1] = (float)vertsY[i];
+	  outputVertices[i*3+2] = (float)vertsZ[i];  
    }
  
    //Print data for debugging.  But FP error...
    /*
    if(time < 2.0){
-      //printf("%f ", time);
-      for(int i = 0; i < numVerts; i++)
-      {
-         printf("(x:%f y:%f z:%f),", outputVertices[i*3], outputVertices[i*3+1], outputVertices[i*3+2]);
-      }
-      printf("\n\n");
+	  //printf("%f ", time);
+	  for(int i = 0; i < numVerts; i++)
+	  {
+		 printf("(x:%f y:%f z:%f),", outputVertices[i*3], outputVertices[i*3+1], outputVertices[i*3+2]);
+	  }
+	  printf("\n\n");
    }
 
    */
 
-   std::fill(forceX, forceX + numVerts, 0);
-   std::fill(forceY, forceY + numVerts, 0);
-   std::fill(forceZ, forceZ + numVerts, 0);
 
 
    //Write to output vertices
@@ -341,14 +340,67 @@ void ClothForceIntegrator::addForce(std::vector<int> verts, Eigen::Vector3d forc
 {
    for (std::vector<int>::iterator i = verts.begin(); i != verts.end(); ++i)
    {
-      forceX[*i] = force.x();
-      forceY[*i] = force.y();
-      forceZ[*i] = force.z();
+	  forceX[*i] = force.x();
+	  forceY[*i] = force.y();
+	  forceZ[*i] = force.z();
 
    }
 }
+void ClothForceIntegrator::startOffload()
+{
+   
+   #ifdef OFFLOAD
+   #pragma offload_transfer target(mic:0)\
+		in(vertsX: length(numVerts) REUSE RETAIN)\
+		in(vertsY: length(numVerts) REUSE RETAIN)\
+		in(vertsZ: length(numVerts) REUSE RETAIN)\
+		in(velsX: length(numVerts) REUSE RETAIN)\
+		in(velsY: length(numVerts) REUSE RETAIN)\
+		in(velsZ: length(numVerts) REUSE RETAIN)
+	#endif
+	#ifndef OFFLOAD
+	  std::cout << "startOffload: Not compiled with Offload, please recompile" << std::endl;
+	#endif
+}
+void ClothForceIntegrator::endOffload()
+{
+
+	#ifdef OFFLOAD
+	#pragma offload_transfer target(mic:0)\
+		out(vertsX: length(numVerts) REUSE RETAIN)\
+		out(vertsY: length(numVerts) REUSE RETAIN)\
+		out(vertsZ: length(numVerts) REUSE RETAIN)\
+		out(velsX: length(numVerts) REUSE RETAIN)\
+		out(velsY: length(numVerts) REUSE RETAIN)\
+		out(velsZ: length(numVerts) REUSE RETAIN)
+	#endif
+	#ifndef OFFLOAD
+	  std::cout << "endOffload: Not compiled with Offload, please recompile" << std::endl;
+	#endif
+}
 ClothForceIntegrator::~ClothForceIntegrator()
 {
+   
+	#ifdef OFFLOAD
+	#pragma offload_transfer target(mic:0)\
+		nocopy(wUA: length(numTriangles) FREE)\
+		nocopy(wUB: length(numTriangles) FREE)\
+		nocopy(wUC: length(numTriangles) FREE)\
+		nocopy(wVA: length(numTriangles) FREE)\
+		nocopy(wVB: length(numTriangles) FREE)\
+		nocopy(wVC: length(numTriangles) FREE)\
+		nocopy(dArray: length(numVerts) FREE)\
+		nocopy(vertsX: length(numVerts) FREE)\
+		nocopy(vertsY: length(numVerts) FREE)\
+		nocopy(vertsZ: length(numVerts) FREE)\
+		nocopy(velsX: length(numVerts) FREE)\
+		nocopy(velsY: length(numVerts) FREE)\
+		nocopy(velsZ: length(numVerts) FREE)\
+		nocopy(forceX: length(numVerts) FREE)\
+		nocopy(forceY: length(numVerts) FREE)\
+		nocopy(forceZ: length(numVerts) FREE)\
+		nocopy(indicies: length(numTriangles*3) FREE)
+	#endif
    delete [] wUA ;
    delete [] wUB ;
    delete [] wUC ;

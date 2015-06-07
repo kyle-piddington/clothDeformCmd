@@ -29,6 +29,8 @@ public:
    void init();
    void draw(GLint h_pos, GLint h_nor, GLint h_tex);
    void step(double time);
+   void startOffload();
+   void endOffload();
    Eigen::Vector2d getUV(int vertIdx);
    Eigen::Vector3d getVert(int vertIdx);
    int getNumVerts(){return verts.size()/3;}

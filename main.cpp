@@ -33,7 +33,7 @@ Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(8,8,256);
+Cloth testCloth(8,8,64);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
@@ -228,20 +228,29 @@ void keyboardGL(unsigned char key, int x, int y)
 			break;
 		case 's':
 			
-			update(dt);
+			update(1/60.0);
 			break;
 		case 'k':
 			testCloth.kickCenter();
-			update(TIMESTEP);
+			update(1/60.0);
 			break;
+      case 'o':
 
-
+         if(keyToggles['o'])
+         {
+            testCloth.startOffload();
+         }
+         else
+         {
+            testCloth.endOffload();
+         }
+         break;
 	}
-	if(keyToggles['l'])
+   if(keyToggles['l'])
 	{
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 	}
-
+ 
 	else
 	{
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -267,13 +276,7 @@ void idleGL()
 
 	if(keyToggles[' '])
 	{
-		for(int i = 0; i < (int)(1/(60.0)/TIMESTEP); i++)
-		{
-			dt = TIMESTEP;
-			t += dt;
-			update(dt);
-
-		}
+			update(1/60.0);
 	}
 	glutPostRedisplay();
 	

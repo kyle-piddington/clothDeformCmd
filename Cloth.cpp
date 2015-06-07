@@ -251,3 +251,18 @@ void Cloth::expand(float amnt)
    integrator->rebind(verts);
  
 }
+
+/**
+ * Ask the integrator to copy it's current simulation state to the Xeon Phi, and set the offload variable
+ */
+void Cloth::startOffload()
+{
+   integrator->startOffload();   
+}
+/**
+ * Tell the integartor to stop all the offloading, and copy the current state back to the CPU
+ */
+void Cloth::endOffload()
+{
+   integrator->endOffload();
+}
