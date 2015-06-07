@@ -1,6 +1,5 @@
 #ifndef __CLOTH_FORCE_INTEGRATOR__
 #define __CLOTH_FORCE_INTEGRATOR__
-#include "Cloth.h"
 #include <memory>
 #include <vector>
 #include "Eigen/Sparse"
@@ -8,25 +7,25 @@
 /**
  * An offloadable cloth simulation class to handle simulation steps;
  */
-
+class Cloth;
 class ClothForceIntegrator
 {
 public:
    ClothForceIntegrator(){};
    ~ClothForceIntegrator();
-   void init(Cloth & cloth);
+   void init(std::vector<int>  indices, std::vector<float>  vertices, std::vector<float>  weights);
    void step(double dt, float * outputVertices, std::vector<int> & lockedVerts);
    void addForce(std::vector<int> verts, Eigen::Vector3d force);
-   void rebind(Cloth & cloth);
-
+   void rebind(std::vector<float> vertices);
+   void bind();
 private:
-   inline void caluclateTriangleWeights(Cloth & cloth);
+   inline void caluclateTriangleWeights( std::vector<float> & weights, std::vector<int> & inds);
 
    /**
     * An array of weights organized per triangle.
     */
     
-   double * wUA;
+   double * wUA; 
    double * wUB;
    double * wUC;
    double * wVA;

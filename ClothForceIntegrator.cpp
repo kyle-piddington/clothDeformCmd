@@ -1,12 +1,21 @@
+
 #include "ClothForceIntegrator.h"
+#include <algorithm>
+#include <iostream>
+
 #define YOUNG_MOD 1000.0 //N/m
 #define POISSON_COEFF 0.85
 #define MASS 600.0 //kg/m
 #define GRAVITY -4.5
 #define DAMPN  0.05
 #define COLLISIONSTR 20.0
-#include <algorithm>
-#include <iostream>
+
+#define ALLOC alloc_if(1)
+#define FREE free_if(1)
+#define RETAIN free_if(0)
+#define REUSE alloc_if(0)
+
+
 
 //#include <omp.h>
 
@@ -27,14 +36,14 @@ struct Vector
 //(THESE SHOULD BE OFFLOADABLE)
 
 
-void ClothForceIntegrator::rebind(Cloth & cloth)
+void ClothForceIntegrator::rebind(std::vector<float> vertices)
 {
-   for(int i = 0; i < cloth.getNumVerts(); i++)
+   for(int i = 0; i < vertices.size(); i++)
    {
-      Eigen::Vector3d vert = cloth.getVert(i);
-      vertsX[i] = vert.x();
-      vertsY[i] = vert.y();
-      vertsZ[i] = vert.z();
+
+      vertsX[i] = vertices[3*i];
+      vertsY[i] = vertices[3*i+1];
+      vertsZ[i] = vertices[3*i+2];
    }
 }
 inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
@@ -91,18 +100,18 @@ inline Vector calculateForce(Vector U, Vector V,
 /**
  * Setup triangle weights organized by indicies
  */
-inline void ClothForceIntegrator::caluclateTriangleWeights(Cloth & cloth)
+inline void ClothForceIntegrator::caluclateTriangleWeights(std::vector<float> & weights,std::vector<int> & inds)
 {
 
    /**
     * Iterate through each triangle and calcluate a weight grouping
     */
-   for(int i = 0; i < cloth.getNumTriangles()*3; i+=3)
+   for(int i = 0; i < numTriangles*3; i+=3)
    {
       std::cout << i << std::endl;
-      Eigen::Vector2d a = cloth.getUV(indicies[i]);
-      Eigen::Vector2d b = cloth.getUV(indicies[i+1]);
-      Eigen::Vector2d c = cloth.getUV(indicies[i+2]);
+      Eigen::Vector2d a = Eigen::Vector2d(weights[2*inds[i]],weights[2*inds[i]+1]);
+      Eigen::Vector2d b = Eigen::Vector2d(weights[2*inds[i+1]],weights[2*inds[i+1]+1]);
+      Eigen::Vector2d c = Eigen::Vector2d(weights[2*inds[i+2]],weights[2*inds[i+2]+1]);
       std::cout << std::endl;
       //create and set weights
       float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
@@ -118,18 +127,7 @@ inline void ClothForceIntegrator::caluclateTriangleWeights(Cloth & cloth)
 
 }
 
-inline void caluclatePositionsAtTime(double * vertsX, double * vertsY, double * vertsZ,
-                              double * velsX, double * velsY, double * velsZ,
-                              double dt, int numVerts,
-                              double * outX, double * outY, double * outZ    )
-{
-   for(int i = 0; i < numVerts; i++)
-   {
-      outX[i] = vertsX[i] + velsX[i] * dt;
-      outY[i] = vertsY[i] + velsY[i] * dt;
-      outZ[i] = vertsZ[i] + velsZ[i] * dt;
-   }
-}
+
 
 inline double lengthSq(Vector v)
 {
@@ -141,38 +139,39 @@ inline double lengthSq(Vector v)
  * Create the initial arrays, and organize data in SOA structure, push to the Phi.
  * @param cloth [description]
  */
-void ClothForceIntegrator::init(Cloth & cloth)
+void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<float>  vertices, std::vector<float>  weights)
 {
+
    /**
     * Replace with __mm_malloc later
     */
-   numTriangles = cloth.getNumTriangles();
-   indicies = new int[cloth.getNumTriangles()*3];
-   wUA = new double[cloth.getNumTriangles()];
-   wUB = new double[cloth.getNumTriangles()];
-   wUC = new double[cloth.getNumTriangles()];
-   wVA = new double[cloth.getNumTriangles()];
-   wVB = new double[cloth.getNumTriangles()];
-   wVC = new double[cloth.getNumTriangles()];
-   dArray = new double[cloth.getNumTriangles()];
-   numVerts = cloth.getNumVerts();
-   vertsX = new double[cloth.getNumVerts()];
-   vertsY = new double[cloth.getNumVerts()];
-   vertsZ = new double[cloth.getNumVerts()];
-   velsX = new double[cloth.getNumVerts()];
-   velsY = new double[cloth.getNumVerts()];
-   velsZ = new double[cloth.getNumVerts()];
+   numTriangles = orig_indices.size()/3;
+   numVerts = vertices.size()/3;
+   indicies = new int[orig_indices.size()];
+   wUA = new double[numTriangles];
+   wUB = new double[numTriangles];
+   wUC = new double[numTriangles];
+   wVA = new double[numTriangles];
+   wVB = new double[numTriangles];
+   wVC = new double[numTriangles];
+   dArray = new double[numTriangles];
 
-   forceX = new double[cloth.getNumVerts()];
-   forceY = new double[cloth.getNumVerts()];
-   forceZ = new double[cloth.getNumVerts()];
+   vertsX = new double[numVerts];
+   vertsY = new double[numVerts];
+   vertsZ = new double[numVerts];
+   velsX = new double[numVerts];
+   velsY = new double[numVerts];
+   velsZ = new double[numVerts];
 
-   for(int i = 0; i < cloth.getNumVerts(); i++)
+   forceX = new double[numVerts];
+   forceY = new double[numVerts];
+   forceZ = new double[numVerts];
+
+   for(int i = 0; i < numVerts; i++)
    {
-      Eigen::Vector3d vert = cloth.getVert(i);
-      vertsX[i] = vert.x();
-      vertsY[i] = vert.y();
-      vertsZ[i] = vert.z();
+      vertsX[i] = vertices[3*i];
+      vertsY[i] = vertices[3*i+1];
+      vertsZ[i] = vertices[3*i+2];
    }
 
    std::fill(velsX, velsX + numVerts, 0);
@@ -184,9 +183,31 @@ void ClothForceIntegrator::init(Cloth & cloth)
    std::fill(forceZ, forceZ + numVerts, 0);
 
 
-   memcpy(indicies,cloth.getInds().data(), sizeof(int)*cloth.getInds().size());
-   caluclateTriangleWeights(cloth);
+   memcpy(indicies,orig_indices.data(), sizeof(int)*orig_indices.size());
+   caluclateTriangleWeights(weights,orig_indices);
+    #ifdef OFFLOAD
+    #pragma offload_transfer target(mic)\
+        in(wUA: length(numTriangles) ALLOC RETAIN)\
+        in(wUB: length(numTriangles) ALLOC RETAIN)\
+        in(wUC: length(numTriangles) ALLOC RETAIN)\
+        in(wVA: length(numTriangles) ALLOC RETAIN)\
+        in(wVB: length(numTriangles) ALLOC RETAIN)\
+        in(wVC: length(numTriangles) ALLOC RETAIN)\
+        in(dArray: length(numVerts) ALLOC RETAIN)\
+        in(vertsX: length(numVerts) ALLOC RETAIN)\
+        in(vertsY: length(numVerts) ALLOC RETAIN)\
+        in(vertsZ: length(numVerts) ALLOC RETAIN)\
+        in(velsX: length(numVerts) ALLOC RETAIN)\
+        in(velsY: length(numVerts) ALLOC RETAIN)\
+        in(velsZ: length(numVerts) ALLOC RETAIN)\
+        in(forceX: length(numVerts) ALLOC RETAIN)\
+        in(forceY: length(numVerts) ALLOC RETAIN)\
+        in(forceZ: length(numVerts) ALLOC RETAIN)\
+        in(indicies: length(numTriangles*3) ALLOC RETAIN)
+    #endif
+
 }
+
 void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<int> & lockedVerts )
 {
 
@@ -194,7 +215,7 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
    //Calculate a force vector
    //
    //EXPLICIT EULER FOR NOW, JESUS THIS IS GOING TO SUCK
-   //#pragma omp parallel for
+   #pragma omp parallel for
    for(int i = 0; i < numTriangles; i++)
    {
       Vector A, B, C, vA, vB, vC;
@@ -231,18 +252,27 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
       //Update first vertex
+      #pragma omp atomic
       forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
+      #pragma omp atomic
       forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
+      #pragma omp atomic
       forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
 
       //Update second vertex
+      #pragma omp atomic
       forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
+      #pragma omp atomic     
       forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
+      #pragma omp atomic
       forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
 
       //update third vertex
+      #pragma omp atomic
       forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
+      #pragma omp atomic
       forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.y;
+      #pragma omp atomic
       forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
    }
 
@@ -325,7 +355,7 @@ ClothForceIntegrator::~ClothForceIntegrator()
    delete [] wVA ;
    delete [] wVB ;
    delete [] wVC ;
-   delete [] vertsX ;
+   delete [] vertsX;
    delete [] vertsY;
    delete [] vertsZ;
    delete [] velsX;

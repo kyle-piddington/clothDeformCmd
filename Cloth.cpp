@@ -52,7 +52,7 @@ Cloth::~Cloth()
 void Cloth::init()
 {
    integrator = new ClothForceIntegrator();
-   integrator->init(*this);
+   integrator->init(inds,verts,tex);
    glGenBuffers(1, &posBufID);
    //glGenBuffers(1, &texBufID);
    glGenBuffers(1, &indBufID);
@@ -247,7 +247,7 @@ void Cloth::expand(float amnt)
    {
       verts[3*i + 2] -= amnt;
       verts[(res*(res-1) + i)*3 + 2] += amnt;
-      integrator->rebind(*this);
-        
    }
+   integrator->rebind(verts);
+ 
 }
