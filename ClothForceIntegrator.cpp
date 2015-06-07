@@ -193,7 +193,7 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 		in(wVA: length(numTriangles) ALLOC RETAIN)\
 		in(wVB: length(numTriangles) ALLOC RETAIN)\
 		in(wVC: length(numTriangles) ALLOC RETAIN)\
-		in(dArray: length(numVerts) ALLOC RETAIN)\
+		in(dArray: length(numTriangles) ALLOC RETAIN)\
 		in(vertsX: length(numVerts) ALLOC RETAIN)\
 		in(vertsY: length(numVerts) ALLOC RETAIN)\
 		in(vertsZ: length(numVerts) ALLOC RETAIN)\
@@ -222,32 +222,33 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    std::cout << "vertsX: " << vertsX << std::endl;
    std::cout << "vertsY: " << vertsY << std::endl;
    std::cout << "vertsZ: " << vertsZ << std::endl;
-
+   
    #ifdef OFFLOAD
    #pragma offload target(mic)\
-      in/*FIXME*/(wUA: length(numTriangles) REUSE RETAIN)\
-      in/*FIXME*/(wUB: length(numTriangles) REUSE RETAIN)\
-      in/*FIXME*/(wUC: length(numTriangles) REUSE RETAIN)\
-      in/*FIXME*/(wVA: length(numTriangles) REUSE RETAIN)\
-      in/*FIXME*/(wVB: length(numTriangles) REUSE RETAIN)\
-      in/*FIXME*/(wVC: length(numTriangles) REUSE RETAIN)\
-      in/*FIXME*/(dArray: length(numVerts) REUSE RETAIN)\
-      inout(vertsX: length(numVerts) REUSE RETAIN)\
-      inout(vertsY: length(numVerts) REUSE RETAIN)\
-      inout(vertsZ: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(velsX: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(velsY: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(velsZ: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(forceX: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(forceY: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(forceZ: length(numVerts) REUSE RETAIN)\
-      in/*FIXME*/(indicies: length(numTriangles*3) REUSE RETAIN)\
+      nocopy(wUA: length(numTriangles) REUSE RETAIN)\
+      nocopy(wUB: length(numTriangles) REUSE RETAIN)\
+      nocopy(wUC: length(numTriangles) REUSE RETAIN)\
+      nocopy(wVA: length(numTriangles) REUSE RETAIN)\
+      nocopy(wVB: length(numTriangles) REUSE RETAIN)\
+      nocopy(wVC: length(numTriangles) REUSE RETAIN)\
+      nocopy(dArray: length(numTriangles) REUSE RETAIN)\
+      nocopy(vertsX: length(numVerts) REUSE RETAIN)\
+      nocopy(vertsY: length(numVerts) REUSE RETAIN)\
+      nocopy(vertsZ: length(numVerts) REUSE RETAIN)\
+      nocopy(velsX: length(numVerts) REUSE RETAIN)\
+      nocopy(velsY: length(numVerts) REUSE RETAIN)\
+      nocopy(velsZ: length(numVerts) REUSE RETAIN)\
+      nocopy(forceX: length(numVerts) REUSE RETAIN)\
+      nocopy(forceY: length(numVerts) REUSE RETAIN)\
+      nocopy(forceZ: length(numVerts) REUSE RETAIN)\
+      nocopy(indicies: length(numTriangles*3) REUSE RETAIN)\
       in(stepAmnt)\
       in(numTriangles)\
       in(numVerts)\
       in(lockedVerts: length(numLockedVerts))\
       in(numLockedVerts)
    #endif
+  
    for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
       // std::cout << "offloaded some stuff" << std::endl;
@@ -360,6 +361,7 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    /**
 	* Set final vertex positions
 	*/
+  
    for(int i = 0; i < numVerts; i++)
    {
 	  outputVertices[i*3] = (float)vertsX[i];
@@ -441,7 +443,7 @@ ClothForceIntegrator::~ClothForceIntegrator()
 		nocopy(wVA: length(numTriangles) FREE)\
 		nocopy(wVB: length(numTriangles) FREE)\
 		nocopy(wVC: length(numTriangles) FREE)\
-		nocopy(dArray: length(numVerts) FREE)\
+		nocopy(dArray: length(numTriangles) FREE)\
 		nocopy(vertsX: length(numVerts) FREE)\
 		nocopy(vertsY: length(numVerts) FREE)\
 		nocopy(vertsZ: length(numVerts) FREE)\
