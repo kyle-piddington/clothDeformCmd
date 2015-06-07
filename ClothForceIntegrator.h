@@ -52,6 +52,6 @@ private:
    double time;
    double dt;
    
-
+   bool offload;
 };
 #endif

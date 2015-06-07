@@ -19,7 +19,7 @@
 
 //#include <omp.h>
 
-const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
+__attribute__((target(mic))) const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
 
 /**
  * Push the force derivative structure to the Phi
@@ -46,7 +46,7 @@ void ClothForceIntegrator::rebind(std::vector<float> vertices)
 	  vertsZ[i] = vertices[3*i+2];
    }
 }
-inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
+__attribute__((target(mic))) struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
 						  double  wUA, double  wUB, double  wUC)
 {
 
@@ -59,7 +59,7 @@ inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
 
 
 
-inline Vector calculateForce(Vector U, Vector V,
+__attribute__((target(mic))) Vector calculateForce(Vector U, Vector V,
 							 double rUJ, double rVJ, double d)
 {
    double euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
@@ -186,7 +186,7 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
    memcpy(indicies,orig_indices.data(), sizeof(int)*orig_indices.size());
    caluclateTriangleWeights(weights,orig_indices);
 	#ifdef OFFLOAD
-	#pragma offload_transfer target(mic:0)\
+	#pragma offload_transfer target(mic)\
 		in(wUA: length(numTriangles) ALLOC RETAIN)\
 		in(wUB: length(numTriangles) ALLOC RETAIN)\
 		in(wUC: length(numTriangles) ALLOC RETAIN)\
@@ -208,12 +208,45 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 
 }
 
-void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & lockedVerts )
+void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & theLockedVerts )
 {
-   const double dt = MIN_STEP;
    //Calculate a force vector
+
+   int numLockedVerts = theLockedVerts.size();
+   int *lockedVerts = theLockedVerts.data();
+
+   #ifdef OFFLOAD
+   #pragma offload target(mic)\
+      nocopy(wUA: length(numTriangles) REUSE RETAIN)\
+      nocopy(wUB: length(numTriangles) REUSE RETAIN)\
+      nocopy(wUC: length(numTriangles) REUSE RETAIN)\
+      nocopy(wVA: length(numTriangles) REUSE RETAIN)\
+      nocopy(wVB: length(numTriangles) REUSE RETAIN)\
+      nocopy(wVC: length(numTriangles) REUSE RETAIN)\
+      nocopy(dArray: length(numVerts) REUSE RETAIN)\
+      out(vertsX: length(numVerts) REUSE RETAIN)\
+      out(vertsY: length(numVerts) REUSE RETAIN)\
+      out(vertsZ: length(numVerts) REUSE RETAIN)\
+      nocopy(velsX: length(numVerts) REUSE RETAIN)\
+      nocopy(velsY: length(numVerts) REUSE RETAIN)\
+      nocopy(velsZ: length(numVerts) REUSE RETAIN)\
+      nocopy(forceX: length(numVerts) REUSE RETAIN)\
+      nocopy(forceY: length(numVerts) REUSE RETAIN)\
+      nocopy(forceZ: length(numVerts) REUSE RETAIN)\
+      nocopy(indicies: length(numTriangles*3) REUSE RETAIN)\
+      in(stepAmnt)\
+      in(numTriangles)\
+      in(numVerts)\
+      in(lockedVerts: length(numLockedVerts))\
+      in(numLockedVerts)
+
+   #endif
+
    for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
+      const double dt = MIN_STEP;
+      const double recipMass = 1/(MASS/numVerts);
+
 	   #pragma omp parallel for
 	   for(int i = 0; i < numTriangles; i++)
 	   {
@@ -279,14 +312,13 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	   {
 		  forceY[i] += GRAVITY;
 	   }
-	   for (std::vector<int>::iterator i = lockedVerts.begin(); i != lockedVerts.end(); ++i)
+	   for(int i = 0; i < numLockedVerts; ++i)
 	   {
-		  forceX[*i]=0;
-		  forceY[*i]=0;
-		  forceZ[*i]=0;
+		  forceX[i]=0;
+		  forceY[i]=0;
+		  forceZ[i]=0;
 
 	   }
-	   const double recipMass = 1/(MASS/numVerts);
 
 	   for(int i = 0; i < numVerts; i++)
 	   {
@@ -298,13 +330,11 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 
 		  velsZ[i]  += forceZ[i] * dt * recipMass;
 		  vertsZ[i] += velsZ[i] * dt;
-         
-
 	   }
 	   
-	   std::fill(forceX, forceX + numVerts, 0);
-	   std::fill(forceY, forceY + numVerts, 0);
-	   std::fill(forceZ, forceZ + numVerts, 0);
+	   memset(forceX, numVerts * sizeof(double), 0);
+	   memset(forceY, numVerts * sizeof(double), 0);
+	   memset(forceZ, numVerts * sizeof(double), 0);
    }
    /**
 	* Set final vertex positions
@@ -349,7 +379,7 @@ void ClothForceIntegrator::startOffload()
 {
    
    #ifdef OFFLOAD
-   #pragma offload_transfer target(mic:0)\
+   #pragma offload_transfer target(mic)\
 		in(vertsX: length(numVerts) REUSE RETAIN)\
 		in(vertsY: length(numVerts) REUSE RETAIN)\
 		in(vertsZ: length(numVerts) REUSE RETAIN)\
@@ -365,7 +395,7 @@ void ClothForceIntegrator::endOffload()
 {
 
 	#ifdef OFFLOAD
-	#pragma offload_transfer target(mic:0)\
+	#pragma offload_transfer target(mic)\
 		out(vertsX: length(numVerts) REUSE RETAIN)\
 		out(vertsY: length(numVerts) REUSE RETAIN)\
 		out(vertsZ: length(numVerts) REUSE RETAIN)\
@@ -381,7 +411,7 @@ ClothForceIntegrator::~ClothForceIntegrator()
 {
    
 	#ifdef OFFLOAD
-	#pragma offload_transfer target(mic:0)\
+	#pragma offload_transfer target(mic)\
 		nocopy(wUA: length(numTriangles) FREE)\
 		nocopy(wUB: length(numTriangles) FREE)\
 		nocopy(wUC: length(numTriangles) FREE)\
