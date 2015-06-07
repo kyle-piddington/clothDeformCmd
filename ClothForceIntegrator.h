@@ -17,6 +17,7 @@ public:
    void init(Cloth & cloth);
    void step(double dt, float * outputVertices, std::vector<int> & lockedVerts);
    void addForce(std::vector<int> verts, Eigen::Vector3d force);
+   void rebind(Cloth & cloth);
 
 private:
    inline void caluclateTriangleWeights(Cloth & cloth);

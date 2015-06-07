@@ -32,13 +32,13 @@ Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(0.5,0.5,64);
+Cloth testCloth(4,4,64);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),
-		glm::vec3(0.8,0.7,0.7),
-		glm::vec3(1.0,0.9,0.8),
-		200.0);
+		glm::vec3(0.8,0.3,0.3),
+		glm::vec3(0.0,0.0,0.0),
+		10.0);
 std::vector<Light> defaultLights;
 
 
@@ -88,7 +88,7 @@ void initGL()
 	prog_debug.addUniform("P");
 	prog_debug.addUniform("MV");
 
-	defaultLights.push_back(Light(glm::vec3(1.0,1.0,1.0),0.8));
+	defaultLights.push_back(Light(glm::vec3(0.0,1.0,1.0),0.8));
 	defaultLights.push_back(Light(glm::vec3(-1.0,1.0,1.0),0.2));
 	GLSL::checkVersion();
 	testCloth.init();
@@ -224,11 +224,17 @@ void keyboardGL(unsigned char key, int x, int y)
 		case 's':
 			
 			update(dt);
-
+			break;
+		case 'w':
+			testCloth.expand(0.1);
+			break;
+		case 'W':
+			testCloth.expand(-0.1);
 			break;
 		case 'k':
 			testCloth.kickCenter();
 			update(TIMESTEP);
+			break;
 
 
 	}

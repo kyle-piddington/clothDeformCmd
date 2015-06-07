@@ -35,6 +35,7 @@ public:
    int getNumTriangles(){return numTriangles;}
    std::vector<int> getInds(){return inds;}
    void kickCenter();
+   void expand(float amnt);
 private:
    std::vector<float> verts;
    std::vector<float> norms;

@@ -231,16 +231,23 @@ Eigen::Vector3d Cloth::getVert(int vertIdx)
 void Cloth::kickCenter()
 {
    std::vector<int> pushVerts;
-   pushVerts.push_back(res*res/2 + res/2);
-   pushVerts.push_back(res*res/2 + res/2 - 1);
-   pushVerts.push_back(res*res/2 + res/2 - 2);
-   pushVerts.push_back(res*res/2 + res/2 + 1);
-   pushVerts.push_back(res*res/2 + res/2 + 2);
-   pushVerts.push_back(res*res/2 + res/2 - res);
-   pushVerts.push_back(res*res/2 + res/2 + res);
-   pushVerts.push_back(res*res/2 + res/2 - 2*res );
-   pushVerts.push_back(res*res/2 + res/2 + 2*res );
+   for(int i = -5; i < 5; i++)
+   {
+      for(int j = -5; j < 5; j++)
+      {
+         pushVerts.push_back(res*res/2 + res/2 + i + j*res);
+      }
+   }
    integrator->addForce(pushVerts,Eigen::Vector3d(0,8000,0)) ; 
 }
 
-
+void Cloth::expand(float amnt)
+{
+   for(int i = 0; i < res; i++)
+   {
+      verts[3*i + 2] -= amnt;
+      verts[(res*(res-1) + i)*3 + 2] += amnt;
+      integrator->rebind(*this);
+        
+   }
+}

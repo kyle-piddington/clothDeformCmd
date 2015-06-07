@@ -1,9 +1,9 @@
 #include "ClothForceIntegrator.h"
-#define YOUNG_MOD 5000.0 //N/m
-#define POISSON_COEFF 0.65
-#define MASS 1.0 //kg/m
-#define GRAVITY -0.5
-#define DAMPN  0.35
+#define YOUNG_MOD 1000.0 //N/m
+#define POISSON_COEFF 0.85
+#define MASS 600.0 //kg/m
+#define GRAVITY -4.5
+#define DAMPN  0.05
 #define COLLISIONSTR 20.0
 #include <algorithm>
 #include <iostream>
@@ -27,7 +27,16 @@ struct Vector
 //(THESE SHOULD BE OFFLOADABLE)
 
 
-
+void ClothForceIntegrator::rebind(Cloth & cloth)
+{
+   for(int i = 0; i < cloth.getNumVerts(); i++)
+   {
+      Eigen::Vector3d vert = cloth.getVert(i);
+      vertsX[i] = vert.x();
+      vertsY[i] = vert.y();
+      vertsZ[i] = vert.z();
+   }
+}
 inline struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
                           double  wUA, double  wUB, double  wUC)
 {
@@ -251,7 +260,7 @@ void ClothForceIntegrator::step(double dt, float * outputVertices, std::vector<i
       forceZ[*i]=0;
 
    }
-   const double recipMass = 1/MASS;
+   const double recipMass = 1/(MASS/numVerts);
 
    for(int i = 0; i < numVerts; i++)
    {
