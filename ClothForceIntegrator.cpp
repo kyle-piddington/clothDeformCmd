@@ -216,12 +216,6 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    int *lockedVerts = new int[numLockedVerts];
    memcpy(lockedVerts, theLockedVerts.data(), numLockedVerts * sizeof(int));
 
-   std::cout << "sup, bitches" << std::endl;
-   std::cout << "numVerts: " << numVerts << std::endl;
-   std::cout << "outputVertices: " << outputVertices << std::endl;
-   std::cout << "vertsX: " << vertsX << std::endl;
-   std::cout << "vertsY: " << vertsY << std::endl;
-   std::cout << "vertsZ: " << vertsZ << std::endl;
    
    #ifdef OFFLOAD
    #pragma offload target(mic)\
@@ -252,8 +246,7 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
       // std::cout << "offloaded some stuff" << std::endl;
-      printf(" offloaded some stuff\n");
-
+     
       const double dt = MIN_STEP;
       const double recipMass = 1/(MASS/numVerts);
 
@@ -352,12 +345,6 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	   // memset(forceZ, numVerts * sizeof(double), 0);
    }
 
-   std::cout << "didn't die" << std::endl;
-   std::cout << "numVerts: " << numVerts << std::endl;
-   std::cout << "outputVertices: " << outputVertices << std::endl;
-   std::cout << "vertsX: " << vertsX << std::endl;
-   std::cout << "vertsY: " << vertsY << std::endl;
-   std::cout << "vertsZ: " << vertsZ << std::endl;
    /**
 	* Set final vertex positions
 	*/
@@ -369,7 +356,6 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	  outputVertices[i*3+2] = (float)vertsZ[i];  
    }
  
-   std::cout << "didn't die the sequel" << std::endl;  
 
    //Print data for debugging.  But FP error...
    /*
