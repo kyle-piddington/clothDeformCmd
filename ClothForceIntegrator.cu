@@ -13,6 +13,9 @@
 
 #define MIN_STEP 0.0005 //Seconds
 
+#define MAX_THREADS 1024
+#define THREADS_PER_BLOCK MAX_THREADS
+
 const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
 
 struct Vector
@@ -310,6 +313,134 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    checkCudaErrors(cudaMemcpy(outIdx, d_outIdx, outIdxSize, cudaMemcpyDeviceToHost));
 }
 
+__global__
+void findExpandedForce(size_t numTriangles,
+                       double *vertsX, double *vertsY, double *vertsZ,
+                       double *velsX, double *velsY, double *velsZ,
+                       int *indicies,
+                       double * wUA, double * wUB, double * wUC, double * wVA, double * wVB, double * wVC, double * dArray,
+                       double * expandedForceX, double * expandedForceY, double * expandedForceZ,
+                       unsigned int * outIdx) {
+   size_t triNo = blockIdx.x * blockDim.x + threadIdx.x;
+
+   if (triNo < numTriangles) {
+      Vector A, B, C, vA, vB, vC;
+
+      A.x = vertsX[indicies[triNo*3]];       // find positions and velocities of each point on this triangle
+      B.x = vertsX[indicies[triNo*3 + 1]];
+      C.x = vertsX[indicies[triNo*3 + 2]];
+
+      A.y = vertsY[indicies[triNo*3]];
+      B.y = vertsY[indicies[triNo*3 + 1]];
+      C.y = vertsY[indicies[triNo*3 + 2]];
+
+      A.z = vertsZ[indicies[triNo*3]];
+      B.z = vertsZ[indicies[triNo*3 + 1]];
+      C.z = vertsZ[indicies[triNo*3 + 2]];
+
+      vA.x = velsX[indicies[triNo*3]];
+      vB.x = velsX[indicies[triNo*3 + 1]];
+      vC.x = velsX[indicies[triNo*3 + 2]];
+
+      vA.y = velsY[indicies[triNo*3]];
+      vB.y = velsY[indicies[triNo*3 + 1]];
+      vC.y = velsY[indicies[triNo*3 + 2]];
+
+      vA.z = velsZ[indicies[triNo*3]];
+      vB.z = velsZ[indicies[triNo*3 + 1]];
+      vC.z = velsZ[indicies[triNo*3 + 2]];
+
+
+      Vector U, V;
+      U.x = A.x * wUA[triNo] + B.x * wUB[triNo] + C.x * wUC[triNo];
+      U.y = A.y * wUA[triNo] + B.y * wUB[triNo] + C.y * wUC[triNo];
+      U.z = A.z * wUA[triNo] + B.z * wUB[triNo] + C.z * wUC[triNo];
+
+      V.x = A.x * wVA[triNo] + B.x * wVB[triNo] + C.x * wVC[triNo];
+      V.y = A.y * wVA[triNo] + B.y * wVB[triNo] + C.y * wVC[triNo];
+      V.z = A.z * wVA[triNo] + B.z * wVB[triNo] + C.z * wVC[triNo];
+
+      double d = dArray[triNo];
+
+      Vector forceA, forceB, forceC;
+      double euu, evv, euv;
+      Vector sigmas;
+
+      euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
+      evv = 0.5 * (V.x * V.x + V.y * V.y + V.z * V.z -1);
+      euv =  U.x * V.x + U.y * V.y + U.z * V.z;
+
+      double youngPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
+
+      sigmas.x = euu + POISSON_COEFF * evv ;
+      sigmas.y = POISSON_COEFF*evv + euu ;
+      sigmas.z = euv * (1 - POISSON_COEFF) / 2 ;
+
+      sigmas.x *= youngPoissonMatrixScalar;
+      sigmas.y *= youngPoissonMatrixScalar;
+      sigmas.z *= youngPoissonMatrixScalar;
+
+      forceA.x = -fabs(d)/2 *(
+               sigmas.x * wUA[triNo] * U.x +
+               sigmas.y * wVA[triNo] * V.x +
+               sigmas.z * (wUA[triNo] * V.x + wVA[triNo] * U.x));
+
+      forceA.y = -fabs(d)/2 * (
+               sigmas.x * wUA[triNo] * U.y +
+               sigmas.y * wVA[triNo] * V.y +
+               sigmas.z * (wUA[triNo] * V.y + wVA[triNo] * U.y));
+
+      forceA.z = -fabs(d)/2 * (
+               sigmas.x * wUA[triNo] * U.z +
+               sigmas.y * wVA[triNo] * V.z +
+               sigmas.z * (wUA[triNo] * V.z + wVA[triNo] * U.z));
+
+      forceB.x = -fabs(d)/2 *(
+               sigmas.x * wUB[triNo] * U.x +
+               sigmas.y * wVB[triNo] * V.x +
+               sigmas.z * (wUB[triNo] * V.x + wVB[triNo] * U.x));
+
+      forceB.y = -fabs(d)/2 * (
+               sigmas.x * wUB[triNo] * U.y +
+               sigmas.y * wVB[triNo] * V.y +
+               sigmas.z * (wUB[triNo] * V.y + wVB[triNo] * U.y));
+
+      forceB.z = -fabs(d)/2 * (
+               sigmas.x * wUB[triNo] * U.z +
+               sigmas.y * wVB[triNo] * V.z +
+               sigmas.z * (wUB[triNo] * V.z + wVB[triNo] * U.z));
+
+      forceC.x = -fabs(d)/2 *(
+               sigmas.x * wUC[triNo] * U.x +
+               sigmas.y * wVC[triNo] * V.x +
+               sigmas.z * (wUC[triNo] * V.x + wVC[triNo] * U.x));
+
+      forceC.y = -fabs(d)/2 * (
+               sigmas.x * wUC[triNo] * U.y +
+               sigmas.y * wVC[triNo] * V.y +
+               sigmas.z * (wUC[triNo] * V.y + wVC[triNo] * U.y));
+
+      forceC.z = -fabs(d)/2 * (
+               sigmas.x * wUC[triNo] * U.z +
+               sigmas.y * wVC[triNo] * V.z +
+               sigmas.z * (wUC[triNo] * V.z + wVC[triNo] * U.z));
+
+      expandedForceX[outIdx[triNo*3]] = forceA.x - DAMPN * vA.x;
+      expandedForceY[outIdx[triNo*3]] = forceA.y - DAMPN * vA.y;
+      expandedForceZ[outIdx[triNo*3]] = forceA.z - DAMPN * vA.z;
+
+      //Update second vertex
+      expandedForceX[outIdx[triNo*3+1]] = forceB.x - DAMPN * vB.x;
+      expandedForceY[outIdx[triNo*3+1]] = forceB.y - DAMPN * vB.y;
+      expandedForceZ[outIdx[triNo*3+1]] = forceB.z - DAMPN * vB.z;
+
+      //update third vertex
+      expandedForceX[outIdx[triNo*3 + 2]] = forceC.x - DAMPN * vC.x;
+      expandedForceY[outIdx[triNo*3 + 2]] = forceC.y - DAMPN * vC.y;
+      expandedForceZ[outIdx[triNo*3 + 2]] = forceC.z - DAMPN * vC.z;
+   }
+}
+
 void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & theLockedVerts )
 {
    
@@ -341,56 +472,70 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
          d_expandedForceX -
       */
 
-	   for(int i = 0; i < numTriangles; i++)
-	   {
-		  Vector A, B, C, vA, vB, vC;
+      dim3 blocks, threads;
 
-		  A.x = vertsX[indicies[i*3]]; 	     // find positions and velocities of each point on this triangle
-		  B.x = vertsX[indicies[i*3 + 1]];
-		  C.x = vertsX[indicies[i*3 + 2]];
+      blocks = dim3(numTriangles / THREADS_PER_BLOCK + 1);
+      threads = dim3(THREADS_PER_BLOCK);
 
-		  A.y = vertsY[indicies[i*3]];
-		  B.y = vertsY[indicies[i*3 + 1]];
-		  C.y = vertsY[indicies[i*3 + 2]];
+      findExpandedForce<<<blocks, threads>>>(numTriangles, d_vertsX, d_vertsY, d_vertsZ, d_velsX, d_velsY, d_velsZ, d_indicies, d_wUA, d_wUB, d_wUC, d_wVA, d_wVB, d_wVC, d_dArray, d_expandedForceX, d_expandedForceY, d_expandedForceZ, outIdx);
+      cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
 
-		  A.z = vertsZ[indicies[i*3]];
-		  B.z = vertsZ[indicies[i*3 + 1]];
-		  C.z = vertsZ[indicies[i*3 + 2]];
+	   // for(int i = 0; i < numTriangles; i++)
+	   // {
+		  // Vector A, B, C, vA, vB, vC;
 
-		  vA.x = velsX[indicies[i*3]];
-		  vB.x = velsX[indicies[i*3 + 1]];
-		  vC.x = velsX[indicies[i*3 + 2]];
+		  // A.x = vertsX[indicies[i*3]]; 	     // find positions and velocities of each point on this triangle
+		  // B.x = vertsX[indicies[i*3 + 1]];
+		  // C.x = vertsX[indicies[i*3 + 2]];
 
-		  vA.y = velsY[indicies[i*3]];
-		  vB.y = velsY[indicies[i*3 + 1]];
-		  vC.y = velsY[indicies[i*3 + 2]];
+		  // A.y = vertsY[indicies[i*3]];
+		  // B.y = vertsY[indicies[i*3 + 1]];
+		  // C.y = vertsY[indicies[i*3 + 2]];
 
-		  vA.z = velsZ[indicies[i*3]];
-		  vB.z = velsZ[indicies[i*3 + 1]];
-		  vC.z = velsZ[indicies[i*3 + 2]];
+		  // A.z = vertsZ[indicies[i*3]];
+		  // B.z = vertsZ[indicies[i*3 + 1]];
+		  // C.z = vertsZ[indicies[i*3 + 2]];
 
-		  Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);  	// find U,V for this triangle
-		  Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
+		  // vA.x = velsX[indicies[i*3]];
+		  // vB.x = velsX[indicies[i*3 + 1]];
+		  // vC.x = velsX[indicies[i*3 + 2]];
 
-		  Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);  	// calculate force on each point in triandle
-		  Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
-		  Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
+		  // vA.y = velsY[indicies[i*3]];
+		  // vB.y = velsY[indicies[i*3 + 1]];
+		  // vC.y = velsY[indicies[i*3 + 2]];
 
-		  //Update first vertex
-		  expandedForceX[outIdx[i*3]] = forceA.x - DAMPN * vA.x;
-		  expandedForceY[outIdx[i*3]] = forceA.y - DAMPN * vA.y;
-		  expandedForceZ[outIdx[i*3]] = forceA.z - DAMPN * vA.z;
+		  // vA.z = velsZ[indicies[i*3]];
+		  // vB.z = velsZ[indicies[i*3 + 1]];
+		  // vC.z = velsZ[indicies[i*3 + 2]];
 
-		  //Update second vertex
-		  expandedForceX[outIdx[i*3+1]] = forceB.x - DAMPN * vB.x;
-		  expandedForceY[outIdx[i*3+1]] = forceB.y - DAMPN * vB.y;
-		  expandedForceZ[outIdx[i*3+1]] = forceB.z - DAMPN * vB.z;
+		  // Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);  	// find U,V for this triangle
+		  // Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
 
-		  //update third vertex
-		  expandedForceX[outIdx[i*3 + 2]] = forceC.x - DAMPN * vC.x;
-		  expandedForceY[outIdx[i*3 + 2]] = forceC.y - DAMPN * vC.y;
-		  expandedForceZ[outIdx[i*3 + 2]] = forceC.z - DAMPN * vC.z;
-	   }
+		  // Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);  	// calculate force on each point in triandle
+		  // Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
+		  // Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
+
+		  // //Update first vertex
+		  // expandedForceX[outIdx[i*3]] = forceA.x - DAMPN * vA.x;
+		  // expandedForceY[outIdx[i*3]] = forceA.y - DAMPN * vA.y;
+		  // expandedForceZ[outIdx[i*3]] = forceA.z - DAMPN * vA.z;
+
+		  // //Update second vertex
+		  // expandedForceX[outIdx[i*3+1]] = forceB.x - DAMPN * vB.x;
+		  // expandedForceY[outIdx[i*3+1]] = forceB.y - DAMPN * vB.y;
+		  // expandedForceZ[outIdx[i*3+1]] = forceB.z - DAMPN * vB.z;
+
+		  // //update third vertex
+		  // expandedForceX[outIdx[i*3 + 2]] = forceC.x - DAMPN * vC.x;
+		  // expandedForceY[outIdx[i*3 + 2]] = forceC.y - DAMPN * vC.y;
+		  // expandedForceZ[outIdx[i*3 + 2]] = forceC.z - DAMPN * vC.z;
+	   // }
+
+      const size_t expandedForceSize = numTriangles * 3 * sizeof(double); // FIXME: this should be const class member
+
+      checkCudaErrors(cudaMemcpy(expandedForceX, d_expandedForceX, expandedForceSize, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(expandedForceY, d_expandedForceY, expandedForceSize, cudaMemcpyDeviceToHost));
+      checkCudaErrors(cudaMemcpy(expandedForceZ, d_expandedForceZ, expandedForceSize, cudaMemcpyDeviceToHost));
 
       for(int i = 0; i < numVerts; i++) { // calc forceXYZ with expandedForceXYZ
          int locMax = (i+1 == numVerts)? numVerts :  locs[i+1];
