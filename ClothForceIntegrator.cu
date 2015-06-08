@@ -230,54 +230,14 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 {
    //Calculate a force vector
    int numLockedVerts = theLockedVerts.size();
-   int *lockedVerts = new int[numLockedVerts];
+   int *lockedVerts = new int[numLockedVerts];  	  // initialize locked verts (map)
    for(int i = 0; i < theLockedVerts.size(); i++)
    {
       lockedVerts[i] = theLockedVerts[i];
    }
 
-   for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
+   for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)  	// for each step in a frame
    {
-    /*  std::cout << "dumping counts: ";
-      for (int i = 0; i < numVerts; i++) {
-         std::cout << counts[i] << " ";
-      }
-      std::cout << std::endl;
-      
-      std::cout << "dumping locs: ";
-      for (int i = 0; i < numVerts; i++) {
-         std::cout << locs[i] << " ";
-      }
-      std::cout << std::endl;
-      
-      std::cout << "dumping outIdx: ";
-      for (int i = 0; i < numIndicies; i++) {
-         std::cout << outIdx[i] << " ";
-      }
-      std::cout << std::endl;
-      
-       std::cout << "dumping indicies: ";
-      for (int i = 0; i < numIndicies; i++) {
-         std::cout << indicies[i] << " ";
-      }
- 
-      std::cout << std::endl;
-      std::cout << "dumping vertsX: ";
-      for (int i = 0; i < numVerts; i++) {
-         std::cout << vertsX[i] << " ";
-      }
-      std::cout << std::endl;
- 
-      std::cout << "dumping vertsY: ";
-      for (int i = 0; i < numVerts; i++) {
-         std::cout << vertsY[i] << " ";
-      }
-       std::cout << "dumping vertsZ: ";
-      for (int i = 0; i < numVerts; i++) {
-         std::cout << vertsZ[i] << " ";
-      }
-      std::cout << std::endl;*/
-   
       const double dt = MIN_STEP;
       const double recipMass = 1/(MASS/numVerts);
 
@@ -285,7 +245,7 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	   {
 		  Vector A, B, C, vA, vB, vC;
 
-		  A.x = vertsX[indicies[i*3]];
+		  A.x = vertsX[indicies[i*3]]; 	     // find positions and velocities of each point on this triangle
 		  B.x = vertsX[indicies[i*3 + 1]];
 		  C.x = vertsX[indicies[i*3 + 2]];
 
@@ -309,10 +269,10 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  vB.z = velsZ[indicies[i*3 + 1]];
 		  vC.z = velsZ[indicies[i*3 + 2]];
 
-		  Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);
+		  Vector U = sumPoint(A,B,C,wUA[i],wUB[i],wUC[i]);  	// find U,V for this triangle
 		  Vector V = sumPoint(A,B,C,wVA[i],wVB[i],wVC[i]);
 
-		  Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);
+		  Vector forceA = calculateForce(U,V,wUA[i],wVA[i],dArray[i]);  	// calculate force on each point in triandle
 		  Vector forceB = calculateForce(U,V,wUB[i],wVB[i],dArray[i]);
 		  Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
@@ -331,24 +291,8 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  expandedForceY[outIdx[i*3 + 2]] = forceC.y - DAMPN * vC.y;
 		  expandedForceZ[outIdx[i*3 + 2]] = forceC.z - DAMPN * vC.z;
 	   }
-    /*  std::cout << "dumping ExpandedForceX: ";
-      for (int i = 0; i < numTriangles*3; i++) {
-         std::cout << expandedForceX[i] << " ";
-      }
-       std::cout << "dumping ExpandedForceY: ";
-      for (int i = 0; i < numTriangles*3; i++) {
-         std::cout << expandedForceY[i] << " ";
-      }
-       std::cout << "dumping ExpandedForceZ: ";
-      for (int i = 0; i < numTriangles*3; i++) {
-         std::cout << expandedForceZ[i] << " ";
-      }
-      std::cout << std::endl;*/
-   
-      // todo: calc forceXYZ with expandedForceXYZ
-      //Locs: Boundaries between forces applied to indicies
 
-      for(int i = 0; i < numVerts; i++){
+      for(int i = 0; i < numVerts; i++) { // calc forceXYZ with expandedForceXYZ
          int locMax = (i+1 == numVerts)? numVerts :  locs[i+1];
          for(int j = locs[i]; j < locMax; j++  ){
             forceX[i] += expandedForceX[j];
@@ -395,12 +339,6 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	  outputVertices[i*3+1] = (float)vertsY[i];
 	  outputVertices[i*3+2] = (float)vertsZ[i];  
    }
-   /* std::cout << "dumping outputVertices: ";
-      for (int i = 0; i < numVerts*3; i++) {
-         std::cout << outputVertices[i] << " ";
-      }
-      std::cout << std::endl;
-   */
 }
 
 ClothForceIntegrator::~ClothForceIntegrator()

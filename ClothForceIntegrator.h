@@ -2,7 +2,7 @@
 #define __CLOTH_FORCE_INTEGRATOR__
 #include <memory>
 #include <vector>
-//#include "Eigen/Sparse"
+#include <cuda_runtime.h>
 
 typedef struct floatVec2D {
    float x, y;
