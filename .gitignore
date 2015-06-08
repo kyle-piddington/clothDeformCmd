@@ -38,3 +38,6 @@ a.out.dSYM
 ehthumbs.db
 Thumbs.db
 .swp
+
+# refactor
+ignoreMe

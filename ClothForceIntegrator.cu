@@ -19,7 +19,7 @@
 
 //#include <omp.h>
 
-__attribute__((target(mic))) const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
+ const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
 
 /**
  * Push the force derivative structure to the Phi
@@ -31,22 +31,7 @@ struct Vector
    double z;
 };
 
-
-//OFFLOAD METHODS
-//(THESE SHOULD BE OFFLOADABLE)
-
-
-void ClothForceIntegrator::rebind(std::vector<float> vertices)
-{
-   for(int i = 0; i < vertices.size()/3; i++)
-   {
-
-	  vertsX[i] = vertices[3*i];
-	  vertsY[i] = vertices[3*i+1];
-	  vertsZ[i] = vertices[3*i+2];
-   }
-}
-__attribute__((target(mic))) struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
+ struct Vector sumPoint(Vector & a, Vector & b, Vector & c,
 						  double  wUA, double  wUB, double  wUC)
 {
 
@@ -59,7 +44,7 @@ __attribute__((target(mic))) struct Vector sumPoint(Vector & a, Vector & b, Vect
 
 
 
-__attribute__((target(mic))) Vector calculateForce(Vector U, Vector V,
+ Vector calculateForce(Vector U, Vector V,
 							 double rUJ, double rVJ, double d)
 {
    double euu = 0.5 * (U.x * U.x + U.y * U.y + U.z * U.z -1);
@@ -109,20 +94,24 @@ inline void ClothForceIntegrator::caluclateTriangleWeights(std::vector<float> & 
    for(int i = 0; i < numTriangles*3; i+=3)
    {
 	  std::cout << i << std::endl;
-	  Eigen::Vector2d a = Eigen::Vector2d(weights[2*inds[i]],weights[2*inds[i]+1]);
-	  Eigen::Vector2d b = Eigen::Vector2d(weights[2*inds[i+1]],weights[2*inds[i+1]+1]);
-	  Eigen::Vector2d c = Eigen::Vector2d(weights[2*inds[i+2]],weights[2*inds[i+2]+1]);
+     floatVec2D a, b, c;
+     a.x = weights[2*inds[i]];
+     a.y = weights[2*inds[i]+1];
+     b.x = weights[2*inds[i+1]];
+     b.y = weights[2*inds[i+1]+1];
+     c.x = weights[2*inds[i+2]];
+     c.y = weights[2*inds[i+2]+1];
 	  std::cout << std::endl;
 	  //create and set weights
-	  float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
+	  float d = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
 	  float recrip = 1.0 /  d;
 	  dArray[i/3] = d;
-	  wUA[i/3] = (b.y() - c.y()) * recrip;
-	  wVA[i/3] = (c.x() - b.x()) * recrip;
-	  wUB[i/3] = (c.y() - a.y()) * recrip;
-	  wVB[i/3] = (a.x() - c.x()) * recrip;
-	  wUC[i/3] = (a.y() - b.y()) * recrip;
-	  wVC[i/3] = (b.x() - a.x()) * recrip;
+	  wUA[i/3] = (b.y - c.y) * recrip;
+	  wVA[i/3] = (c.x - b.x) * recrip;
+	  wUB[i/3] = (c.y - a.y) * recrip;
+	  wVB[i/3] = (a.x - c.x) * recrip;
+	  wUC[i/3] = (a.y - b.y) * recrip;
+	  wVC[i/3] = (b.x - a.x) * recrip;
    }
 
 }
@@ -389,16 +378,6 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    //Write to output vertices
 
    
-}
-void ClothForceIntegrator::addForce(std::vector<int> verts, Eigen::Vector3d force)
-{
-   for (std::vector<int>::iterator i = verts.begin(); i != verts.end(); ++i)
-   {
-	  forceX[*i] = force.x();
-	  forceY[*i] = force.y();
-	  forceZ[*i] = force.z();
-
-   }
 }
 void ClothForceIntegrator::startOffload()
 {

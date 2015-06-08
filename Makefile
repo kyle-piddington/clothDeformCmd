@@ -2,7 +2,7 @@ all: a.out
 	g++ -std=c++0x -Wno-deprecated *.cpp *.cc -DGL_GLEXT_PROTOTYPES -lglut -lGL -lGLU
 
 cuda: clean
-	nvcc -std=c++11 -pedantic -g -O3 -Wno-deprecated *.cpp *.cc -framework GLUT -framework OpenGL
+	nvcc *.cpp *.cc *.cu -Xlinker -framework,OpenGL,-framework,GLUT
 
 osx: clean
 	g++ -std=c++11 -pedantic -g -O3 -Wno-deprecated *.cpp *.cc -framework GLUT -framework OpenGL

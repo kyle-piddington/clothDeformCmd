@@ -2,7 +2,11 @@
 #define __CLOTH_FORCE_INTEGRATOR__
 #include <memory>
 #include <vector>
-#include "Eigen/Sparse"
+//#include "Eigen/Sparse"
+
+typedef struct floatVec2D {
+   float x, y;
+} floatVec2d;
 
 /**
  * An offloadable cloth simulation class to handle simulation steps;
@@ -15,8 +19,6 @@ public:
    ~ClothForceIntegrator();
    void init(std::vector<int>  indices, std::vector<float>  vertices, std::vector<float>  weights);
    void step(double dt, float * outputVertices, std::vector<int> & lockedVerts);
-   void addForce(std::vector<int> verts, Eigen::Vector3d force);
-   void rebind(std::vector<float> vertices);
    void startOffload();
    void endOffload();
 private:

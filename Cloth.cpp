@@ -230,26 +230,14 @@ Eigen::Vector3d Cloth::getVert(int vertIdx)
 
 void Cloth::kickCenter()
 {
-   std::vector<int> pushVerts;
-   for(int i = -5; i < 5; i++)
-   {
-      for(int j = -5; j < 5; j++)
-      {
-         pushVerts.push_back(res*res/2 + res/2 + i + j*res);
-      }
-   }
-   integrator->addForce(pushVerts,Eigen::Vector3d(0,8000,0)) ; 
+   // TODO: implement kick for cuda
+   std::cerr << "kick not implemented for cuda" << std::endl;
 }
 
 void Cloth::expand(float amnt)
 {
-   for(int i = 0; i < res; i++)
-   {
-      verts[3*i + 2] -= amnt;
-      verts[(res*(res-1) + i)*3 + 2] += amnt;
-   }
-   integrator->rebind(verts);
- 
+   // TODO: implement kick for cuda
+   std::cerr << "kick not implemented for cuda" << std::endl;
 }
 
 /**
