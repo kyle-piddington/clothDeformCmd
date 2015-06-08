@@ -33,10 +33,22 @@ private:
    double * wVB;
    double * wVC;
    double * dArray;
+
+   double * d_wUA; 
+   double * d_wUB;
+   double * d_wUC;
+   double * d_wVA;
+   double * d_wVB;
+   double * d_wVC;
+   double * d_dArray;
    
    double * vertsX;
    double * vertsY;
    double * vertsZ;
+   
+   double *d_vertsX, *d_vertsY, *d_vertsZ;
+   
+   double *d_velsX, *d_velsY, *d_velsZ;
    
    double * velsX;
    double * velsY;
@@ -47,12 +59,19 @@ private:
    double * forceZ;
    
    int * indicies;
+
+   int * d_indicies;
    
    unsigned int * outIdx;
+   unsigned int * d_outIdx;
    
    double * expandedForceX;
    double * expandedForceY;
    double * expandedForceZ;
+
+   double * d_expandedForceX;
+   double * d_expandedForceY;
+   double * d_expandedForceZ;
    
    unsigned int * counts;
    unsigned int * locs;

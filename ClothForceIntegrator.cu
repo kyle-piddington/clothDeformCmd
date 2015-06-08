@@ -1,5 +1,6 @@
 
 #include "ClothForceIntegrator.h"
+#include "utils.h"
 #include <algorithm>
 #include <iostream>
 
@@ -224,10 +225,98 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    
    std::cout << "ran init without dying" << std::endl;
 //   exit(EXIT_FAILURE);
+
+   const size_t vertsSize = numVerts * sizeof(double);
+
+   checkCudaErrors(cudaMalloc(&d_vertsX, vertsSize));    // init vertsXYZ on device
+   checkCudaErrors(cudaMalloc(&d_vertsY, vertsSize));
+   checkCudaErrors(cudaMalloc(&d_vertsZ, vertsSize));
+   
+   checkCudaErrors(cudaMemcpy(d_vertsX, vertsX, vertsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_vertsY, vertsY, vertsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_vertsZ, vertsZ, vertsSize, cudaMemcpyHostToDevice));
+   
+   checkCudaErrors(cudaMalloc(&d_velsX, vertsSize));  // init velsXYZ on device
+   checkCudaErrors(cudaMalloc(&d_velsY, vertsSize));
+   checkCudaErrors(cudaMalloc(&d_velsZ, vertsSize));
+
+   checkCudaErrors(cudaMemcpy(d_velsX, velsX, vertsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_velsY, velsY, vertsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_velsZ, velsZ, vertsSize, cudaMemcpyHostToDevice));
+
+   const size_t indiciesSize = numIndicies * sizeof(int);
+
+   // init d_indicies on device
+   checkCudaErrors(cudaMalloc(&d_indicies, indiciesSize));
+   checkCudaErrors(cudaMemcpy(d_indicies, indicies, indiciesSize, cudaMemcpyHostToDevice));
+
+   // init weights on device
+   const size_t weightsSize = numTriangles * sizeof(double);
+
+   checkCudaErrors(cudaMalloc(&d_wUA, weightsSize)); 
+   checkCudaErrors(cudaMalloc(&d_wUB, weightsSize));
+   checkCudaErrors(cudaMalloc(&d_wUC, weightsSize));
+   checkCudaErrors(cudaMalloc(&d_wVA, weightsSize));
+   checkCudaErrors(cudaMalloc(&d_wVB, weightsSize));
+   checkCudaErrors(cudaMalloc(&d_wVC, weightsSize));
+   checkCudaErrors(cudaMalloc(&d_dArray, weightsSize));
+
+   checkCudaErrors(cudaMemcpy(d_wUA, wUA, weightsSize, cudaMemcpyHostToDevice)); 
+   checkCudaErrors(cudaMemcpy(d_wUB, wUB, weightsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_wUC, wUC, weightsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_wVA, wVA, weightsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_wVB, wVB, weightsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_wVC, wVC, weightsSize, cudaMemcpyHostToDevice));
+   checkCudaErrors(cudaMemcpy(d_dArray, dArray, weightsSize, cudaMemcpyHostToDevice));
+
+   // inid d_outIdx on device
+   const size_t outIdxSize = numTriangles * 3 * sizeof(unsigned int);
+
+   checkCudaErrors(cudaMalloc(&d_outIdx, outIdxSize));
+   checkCudaErrors(cudaMemcpy(d_outIdx, outIdx, outIdxSize, cudaMemcpyHostToDevice));
+
+   // allocate d_expandedForceXYZ
+   const size_t expandedForceSize = numTriangles * 3 * sizeof(double);
+
+   checkCudaErrors(cudaMalloc(&d_expandedForceX, expandedForceSize));
+   checkCudaErrors(cudaMalloc(&d_expandedForceY, expandedForceSize));
+   checkCudaErrors(cudaMalloc(&d_expandedForceZ, expandedForceSize));
+
+   // DEBUG
+
+   // verify init of d_vertsXYZ
+   checkCudaErrors(cudaMemcpy(vertsX, d_vertsX, vertsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(vertsY, d_vertsY, vertsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(vertsZ, d_vertsZ, vertsSize, cudaMemcpyDeviceToHost));
+
+   // verify init of d_velsXYZ
+   checkCudaErrors(cudaMemcpy(velsX, d_velsX, vertsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(velsY, d_velsY, vertsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(velsZ, d_velsZ, vertsSize, cudaMemcpyDeviceToHost));
+
+   // verify init of d_indicies
+   checkCudaErrors(cudaMemcpy(indicies, d_indicies, indiciesSize, cudaMemcpyDeviceToHost));
+
+   // verify init of weights on device
+   checkCudaErrors(cudaMemcpy(wUA, d_wUA, weightsSize, cudaMemcpyDeviceToHost)); 
+   checkCudaErrors(cudaMemcpy(wUB, d_wUB, weightsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(wUC, d_wUC, weightsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(wVA, d_wVA, weightsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(wVB, d_wVB, weightsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(wVC, d_wVC, weightsSize, cudaMemcpyDeviceToHost));
+   checkCudaErrors(cudaMemcpy(dArray, d_dArray, weightsSize, cudaMemcpyDeviceToHost));
+
+   // verify init of d_outIdx
+   checkCudaErrors(cudaMemcpy(outIdx, d_outIdx, outIdxSize, cudaMemcpyDeviceToHost));
 }
 
 void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & theLockedVerts )
 {
+   
+   const size_t vertsSize = numVerts * sizeof(double);
+   
+   
+   
    //Calculate a force vector
    int numLockedVerts = theLockedVerts.size();
    int *lockedVerts = new int[numLockedVerts];  	  // initialize locked verts (map)
@@ -240,6 +329,17 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    {
       const double dt = MIN_STEP;
       const double recipMass = 1/(MASS/numVerts);
+
+      /* launch a thread for each triandle and write results to expanded force
+      shit we will need initialized:
+         d_vertsXYZ   -
+         d_velsXYZ    -
+         d_indicies   -
+         d_(weights)  -
+         d_outIdx     -
+      shit we will need allocated:
+         d_expandedForceX -
+      */
 
 	   for(int i = 0; i < numTriangles; i++)
 	   {
