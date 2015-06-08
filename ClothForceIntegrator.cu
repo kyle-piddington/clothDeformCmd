@@ -235,17 +235,11 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    checkCudaErrors(cudaMalloc(&d_vertsY, vertsSize));
    checkCudaErrors(cudaMalloc(&d_vertsZ, vertsSize));
    
-   checkCudaErrors(cudaMemcpy(d_vertsX, vertsX, vertsSize, cudaMemcpyHostToDevice));
-   checkCudaErrors(cudaMemcpy(d_vertsY, vertsY, vertsSize, cudaMemcpyHostToDevice));
-   checkCudaErrors(cudaMemcpy(d_vertsZ, vertsZ, vertsSize, cudaMemcpyHostToDevice));
+   
    
    checkCudaErrors(cudaMalloc(&d_velsX, vertsSize));  // init velsXYZ on device
    checkCudaErrors(cudaMalloc(&d_velsY, vertsSize));
    checkCudaErrors(cudaMalloc(&d_velsZ, vertsSize));
-
-   checkCudaErrors(cudaMemcpy(d_velsX, velsX, vertsSize, cudaMemcpyHostToDevice));
-   checkCudaErrors(cudaMemcpy(d_velsY, velsY, vertsSize, cudaMemcpyHostToDevice));
-   checkCudaErrors(cudaMemcpy(d_velsZ, velsZ, vertsSize, cudaMemcpyHostToDevice));
 
    const size_t indiciesSize = numIndicies * sizeof(int);
 
@@ -287,16 +281,6 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
 
    // DEBUG
 
-   // verify init of d_vertsXYZ
-   checkCudaErrors(cudaMemcpy(vertsX, d_vertsX, vertsSize, cudaMemcpyDeviceToHost));
-   checkCudaErrors(cudaMemcpy(vertsY, d_vertsY, vertsSize, cudaMemcpyDeviceToHost));
-   checkCudaErrors(cudaMemcpy(vertsZ, d_vertsZ, vertsSize, cudaMemcpyDeviceToHost));
-
-   // verify init of d_velsXYZ
-   checkCudaErrors(cudaMemcpy(velsX, d_velsX, vertsSize, cudaMemcpyDeviceToHost));
-   checkCudaErrors(cudaMemcpy(velsY, d_velsY, vertsSize, cudaMemcpyDeviceToHost));
-   checkCudaErrors(cudaMemcpy(velsZ, d_velsZ, vertsSize, cudaMemcpyDeviceToHost));
-
    // verify init of d_indicies
    checkCudaErrors(cudaMemcpy(indicies, d_indicies, indiciesSize, cudaMemcpyDeviceToHost));
 
@@ -312,6 +296,8 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    // verify init of d_outIdx
    checkCudaErrors(cudaMemcpy(outIdx, d_outIdx, outIdxSize, cudaMemcpyDeviceToHost));
 }
+
+#define FABS(X) ((X) < 0 ? (-(X)) : (X))
 
 __global__
 void findExpandedForce(size_t numTriangles,
@@ -380,54 +366,60 @@ void findExpandedForce(size_t numTriangles,
       sigmas.y *= youngPoissonMatrixScalar;
       sigmas.z *= youngPoissonMatrixScalar;
 
-      forceA.x = -fabs(d)/2 *(
+      if (d < 0) {
+         d = -d;
+      }
+
+      forceA.x = -(d)/2 *(
                sigmas.x * wUA[triNo] * U.x +
                sigmas.y * wVA[triNo] * V.x +
                sigmas.z * (wUA[triNo] * V.x + wVA[triNo] * U.x));
 
-      forceA.y = -fabs(d)/2 * (
+      forceA.y = -(d)/2 * (
                sigmas.x * wUA[triNo] * U.y +
                sigmas.y * wVA[triNo] * V.y +
                sigmas.z * (wUA[triNo] * V.y + wVA[triNo] * U.y));
 
-      forceA.z = -fabs(d)/2 * (
+      forceA.z = -(d)/2 * (
                sigmas.x * wUA[triNo] * U.z +
                sigmas.y * wVA[triNo] * V.z +
                sigmas.z * (wUA[triNo] * V.z + wVA[triNo] * U.z));
 
-      forceB.x = -fabs(d)/2 *(
+      expandedForceX[outIdx[triNo*3]] = forceA.x - DAMPN * vA.x;
+      expandedForceY[outIdx[triNo*3]] = forceA.y - DAMPN * vA.y;
+      expandedForceZ[outIdx[triNo*3]] = forceA.z - DAMPN * vA.z;
+
+      forceB.x = -(d)/2 *(
                sigmas.x * wUB[triNo] * U.x +
                sigmas.y * wVB[triNo] * V.x +
                sigmas.z * (wUB[triNo] * V.x + wVB[triNo] * U.x));
 
-      forceB.y = -fabs(d)/2 * (
+      forceB.y = -(d)/2 * (
                sigmas.x * wUB[triNo] * U.y +
                sigmas.y * wVB[triNo] * V.y +
                sigmas.z * (wUB[triNo] * V.y + wVB[triNo] * U.y));
 
-      forceB.z = -fabs(d)/2 * (
+      forceB.z = -(d)/2 * (
                sigmas.x * wUB[triNo] * U.z +
                sigmas.y * wVB[triNo] * V.z +
                sigmas.z * (wUB[triNo] * V.z + wVB[triNo] * U.z));
 
-      forceC.x = -fabs(d)/2 *(
+      forceC.x = -(d)/2 *(
                sigmas.x * wUC[triNo] * U.x +
                sigmas.y * wVC[triNo] * V.x +
                sigmas.z * (wUC[triNo] * V.x + wVC[triNo] * U.x));
 
-      forceC.y = -fabs(d)/2 * (
+      forceC.y = -(d)/2 * (
                sigmas.x * wUC[triNo] * U.y +
                sigmas.y * wVC[triNo] * V.y +
                sigmas.z * (wUC[triNo] * V.y + wVC[triNo] * U.y));
 
-      forceC.z = -fabs(d)/2 * (
+      forceC.z = -(d)/2 * (
                sigmas.x * wUC[triNo] * U.z +
                sigmas.y * wVC[triNo] * V.z +
                sigmas.z * (wUC[triNo] * V.z + wVC[triNo] * U.z));
 
-      expandedForceX[outIdx[triNo*3]] = forceA.x - DAMPN * vA.x;
-      expandedForceY[outIdx[triNo*3]] = forceA.y - DAMPN * vA.y;
-      expandedForceZ[outIdx[triNo*3]] = forceA.z - DAMPN * vA.z;
+      
 
       //Update second vertex
       expandedForceX[outIdx[triNo*3+1]] = forceB.x - DAMPN * vB.x;
@@ -472,12 +464,20 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
          d_expandedForceX -
       */
 
+      checkCudaErrors(cudaMemcpy(d_vertsX, vertsX, vertsSize, cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_vertsY, vertsY, vertsSize, cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_vertsZ, vertsZ, vertsSize, cudaMemcpyHostToDevice));
+
+      checkCudaErrors(cudaMemcpy(d_velsX, velsX, vertsSize, cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_velsY, velsY, vertsSize, cudaMemcpyHostToDevice));
+      checkCudaErrors(cudaMemcpy(d_velsZ, velsZ, vertsSize, cudaMemcpyHostToDevice));
+
       dim3 blocks, threads;
 
       blocks = dim3(numTriangles / THREADS_PER_BLOCK + 1);
       threads = dim3(THREADS_PER_BLOCK);
 
-      findExpandedForce<<<blocks, threads>>>(numTriangles, d_vertsX, d_vertsY, d_vertsZ, d_velsX, d_velsY, d_velsZ, d_indicies, d_wUA, d_wUB, d_wUC, d_wVA, d_wVB, d_wVC, d_dArray, d_expandedForceX, d_expandedForceY, d_expandedForceZ, outIdx);
+      findExpandedForce<<<blocks, threads>>>(numTriangles, d_vertsX, d_vertsY, d_vertsZ, d_velsX, d_velsY, d_velsZ, d_indicies, d_wUA, d_wUB, d_wUC, d_wVA, d_wVB, d_wVC, d_dArray, d_expandedForceX, d_expandedForceY, d_expandedForceZ, d_outIdx);
       cudaDeviceSynchronize(); checkCudaErrors(cudaGetLastError());
 
 	   // for(int i = 0; i < numTriangles; i++)
