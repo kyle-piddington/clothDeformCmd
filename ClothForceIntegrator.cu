@@ -110,13 +110,15 @@ inline double lengthSq(Vector v)
    [a b c] [a b c]
    vertices:
    [x y z] [ x y z] [x y z] */
-ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::vector<float>  vertices, std::vector<float>  weights)
+ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::vector<float>  vertices, std::vector<float>  weights):
+	numTriangles(orig_indices.size()/3),
+	numVerts(vertices.size()/3),
+	numIndicies(orig_indices.size())
+
 {
    /**
 	* Replace with __mm_malloc later
 	*/
-   numTriangles = orig_indices.size()/3;
-   numVerts = vertices.size()/3;
    
    std::cout << "numVerts: " << numVerts << std::endl;
    
@@ -159,10 +161,12 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    std::fill(forceY, forceY + numVerts, 0);
    std::fill(forceZ, forceZ + numVerts, 0);
 
-   memcpy(indicies,orig_indices.data(), sizeof(int)*orig_indices.size());
+   for(int i = 0; i < numIndicies; i++)
+   {
+      indicies[i] = orig_indices[i];
+   }
    caluclateTriangleWeights(weights,orig_indices);
    
-   numIndicies = orig_indices.size();
    
    counts = new unsigned int[numVerts];
    locs = new unsigned int[numVerts];
@@ -195,13 +199,13 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    }
    
    std::cout << "dumping counts: ";
-   for (int i = 0; i < numIndicies; i++) {
+   for (int i = 0; i < numVerts; i++) {
       std::cout << counts[i] << " ";
    }
    std::cout << std::endl;
    
    std::cout << "dumping locs: ";
-   for (int i = 0; i < numIndicies; i++) {
+   for (int i = 0; i < numVerts; i++) {
       std::cout << locs[i] << " ";
    }
    std::cout << std::endl;
@@ -209,6 +213,12 @@ ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::
    std::cout << "dumping outIdx: ";
    for (int i = 0; i < numIndicies; i++) {
       std::cout << outIdx[i] << " ";
+   }
+   std::cout << std::endl;
+   
+    std::cout << "dumping indicies: ";
+   for (int i = 0; i < numIndicies; i++) {
+      std::cout << indicies[i] << " ";
    }
    std::cout << std::endl;
    
@@ -221,10 +231,53 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
    //Calculate a force vector
    int numLockedVerts = theLockedVerts.size();
    int *lockedVerts = new int[numLockedVerts];
-   memcpy(lockedVerts, theLockedVerts.data(), numLockedVerts * sizeof(int));
-  
+   for(int i = 0; i < theLockedVerts.size(); i++)
+   {
+      lockedVerts[i] = theLockedVerts[i];
+   }
+
    for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
    {
+    /*  std::cout << "dumping counts: ";
+      for (int i = 0; i < numVerts; i++) {
+         std::cout << counts[i] << " ";
+      }
+      std::cout << std::endl;
+      
+      std::cout << "dumping locs: ";
+      for (int i = 0; i < numVerts; i++) {
+         std::cout << locs[i] << " ";
+      }
+      std::cout << std::endl;
+      
+      std::cout << "dumping outIdx: ";
+      for (int i = 0; i < numIndicies; i++) {
+         std::cout << outIdx[i] << " ";
+      }
+      std::cout << std::endl;
+      
+       std::cout << "dumping indicies: ";
+      for (int i = 0; i < numIndicies; i++) {
+         std::cout << indicies[i] << " ";
+      }
+ 
+      std::cout << std::endl;
+      std::cout << "dumping vertsX: ";
+      for (int i = 0; i < numVerts; i++) {
+         std::cout << vertsX[i] << " ";
+      }
+      std::cout << std::endl;
+ 
+      std::cout << "dumping vertsY: ";
+      for (int i = 0; i < numVerts; i++) {
+         std::cout << vertsY[i] << " ";
+      }
+       std::cout << "dumping vertsZ: ";
+      for (int i = 0; i < numVerts; i++) {
+         std::cout << vertsZ[i] << " ";
+      }
+      std::cout << std::endl;*/
+   
       const double dt = MIN_STEP;
       const double recipMass = 1/(MASS/numVerts);
 
@@ -278,7 +331,20 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  expandedForceY[outIdx[i*3 + 2]] = forceC.y - DAMPN * vC.y;
 		  expandedForceZ[outIdx[i*3 + 2]] = forceC.z - DAMPN * vC.z;
 	   }
-      
+      std::cout << "dumping ExpandedForceX: ";
+      for (int i = 0; i < numTriangles*3; i++) {
+         std::cout << expandedForceX[i] << " ";
+      }
+       std::cout << "dumping ExpandedForceY: ";
+      for (int i = 0; i < numTriangles*3; i++) {
+         std::cout << expandedForceY[i] << " ";
+      }
+       std::cout << "dumping ExpandedForceZ: ";
+      for (int i = 0; i < numTriangles*3; i++) {
+         std::cout << expandedForceZ[i] << " ";
+      }
+      std::cout << std::endl;
+   
       // todo: calc forceXYZ with expandedForceXYZ
       for (int i = 0; i < numTriangles*3; i++) {
          unsigned int theLoc = locs[indicies[i]];
@@ -297,30 +363,31 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	   {
 		  forceY[i] += GRAVITY;
 	   }
-	   for(int i = 0; i < numLockedVerts; ++i)
-	   {
-		  forceX[lockedVerts[i]]=0;
-		  forceY[lockedVerts[i]]=0;
-		  forceZ[lockedVerts[i]]=0;
-	   }
+      
+// 	   for(int i = 0; i < numLockedVerts; ++i)
+// 	   {
+// 		  forceX[lockedVerts[i]]=0;
+// 		  forceY[lockedVerts[i]]=0;
+// 		  forceZ[lockedVerts[i]]=0;
+// 	   }
 
-	   for(int i = 0; i < numVerts; i++)
-	   {
-		  velsX[i]  += forceX[i] * dt * recipMass;
-		  vertsX[i] += velsX[i] * dt;
+   	   for(int i = 0; i < numVerts; i++)
+   	   {
+   		  velsX[i]  += forceX[i] * dt * recipMass;
+   		  vertsX[i] += velsX[i] * dt;
 
-		  velsY[i]  += forceY[i] * dt * recipMass;
-		  vertsY[i] += velsY[i] * dt;
+   		  velsY[i]  += forceY[i] * dt * recipMass;
+   		  vertsY[i] += velsY[i] * dt;
 
-		  velsZ[i]  += forceZ[i] * dt * recipMass;
-		  vertsZ[i] += velsZ[i] * dt;
-	   }
+   		  velsZ[i]  += forceZ[i] * dt * recipMass;
+   		  vertsZ[i] += velsZ[i] * dt;
+   	   }
 
       for(int i = 0; i < numVerts; i++) {
          forceX[i] = forceY[i] = forceZ[i] = 0;
       }
    }
-   
+   delete [] lockedVerts;
    /**
 	* Set final vertex positions
 	*/
@@ -330,6 +397,12 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	  outputVertices[i*3+1] = (float)vertsY[i];
 	  outputVertices[i*3+2] = (float)vertsZ[i];  
    }
+    std::cout << "dumping outputVertices: ";
+      for (int i = 0; i < numVerts*3; i++) {
+         std::cout << outputVertices[i] << " ";
+      }
+      std::cout << std::endl;
+   
 }
 
 ClothForceIntegrator::~ClothForceIntegrator()

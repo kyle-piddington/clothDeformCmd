@@ -1,5 +1,5 @@
 #include "Shader.h"
-
+#include <stdio.h>
 Shader::Shader(std::string name, int pid, GLenum shaderType){
     GLint rc;
     sHandler = glCreateShader(shaderType);
