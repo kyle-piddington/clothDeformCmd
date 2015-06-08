@@ -23,7 +23,7 @@
 #include "Cloth.h"
 #include <memory>
 
-#define TIMESTEP 0.0001
+#define TIMESTEP 1/60.0
 using namespace std;
 bool keyToggles[256];
 bool keyDowns[256];
@@ -51,7 +51,6 @@ void initGL()
 	//////////////////////////////////////////////////////
 	// Initialize GL for the whole scene
 	//
-
 	// Set background color
 	glClearColor(0.4f, 0.4f, 0.4f, 0.4f);
 	// Enable z-buffer test
@@ -95,6 +94,8 @@ void initGL()
 	testCloth.init();
 	testCloth.bind();
 	
+   camera.mouseClicked(0,-1200,true,false,false);
+   camera.mouseClicked(600, 600,false,false,false);
 }
 
 void reshapeGL(int w, int h)
@@ -228,11 +229,11 @@ void keyboardGL(unsigned char key, int x, int y)
 			break;
 		case 's':
 			
-			update(1/60.0);
+			update(TIMESTEP);
 			break;
 		case 'k':
 			testCloth.kickCenter();
-			update(1/60.0);
+			update(TIMESTEP);
 			break;
       case 'o':
 
@@ -273,16 +274,17 @@ void idleGL()
    {
       testCloth.expand(0.1);
    }
-
+   float oldTime = glutGet(GLUT_ELAPSED_TIME);
 	if(keyToggles[' '])
 	{
-			update(1/60.0);
+			update(TIMESTEP);
 	}
 	glutPostRedisplay();
 	
 	// calc fps
 	time = glutGet(GLUT_ELAPSED_TIME);
-			
+
+	//printf("update: %lf\n", (time - oldTime));			
 	if (time - timebase > 1000)
 	{
 		double fps = frame * 1000.0 / (time - timebase);

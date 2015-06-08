@@ -14,7 +14,7 @@
 #define FREE free_if(1)
 #define RETAIN free_if(0)
 #define REUSE alloc_if(0)
-#define MIN_STEP 0.001 //Seconds
+#define MIN_STEP 0.0005//Seconds
 
 
 //#include <omp.h>
@@ -115,11 +115,9 @@ inline void ClothForceIntegrator::caluclateTriangleWeights(std::vector<float> & 
 	*/
    for(int i = 0; i < numTriangles*3; i+=3)
    {
-	  std::cout << i << std::endl;
 	  Eigen::Vector2d a = Eigen::Vector2d(weights[2*inds[i]],weights[2*inds[i]+1]);
 	  Eigen::Vector2d b = Eigen::Vector2d(weights[2*inds[i+1]],weights[2*inds[i+1]+1]);
 	  Eigen::Vector2d c = Eigen::Vector2d(weights[2*inds[i+2]],weights[2*inds[i+2]+1]);
-	  std::cout << std::endl;
 	  //create and set weights
 	  float d = a.x() * (b.y() - c.y()) + b.x() * (c.y() - a.y()) + c.x() * (a.y() - b.y());
 	  float recrip = 1.0 /  d;
@@ -288,7 +286,10 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
       in(forceY: length(0) REUSE RETAIN)\
       in(forceZ: length(0) REUSE RETAIN)\
       in(indicies: length(0) REUSE RETAIN)\
-      inout(lockedVerts: length(numLockedVerts))
+      inout(lockedVerts: length(numLockedVerts))\
+      in(numVerts)\
+      in(numTriangles)\
+      in(numLockedVerts)
    #endif
    {
        for(int steps = 0; steps < (int)(stepAmnt/MIN_STEP); steps++)
@@ -297,8 +298,7 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 	
 	      const double dt = MIN_STEP;
 	      const double recipMass = 1/(MASS/numVerts);
-
-		   #pragma omp for simd
+		   #pragma omp parallel for
 		   for(int i = 0; i < numTriangles; i++)
 		   {
 			  Vector A, B, C, vA, vB, vC;
@@ -335,33 +335,29 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 			  Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
 			  //Update first vertex
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
 
 			  //Update second vertex
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
-//			  #pragma omp atomic     
+			  #pragma omp atomic     
 			  forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
 
 			  //update third vertex
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.y;
-//			  #pragma omp atomic
+			  #pragma omp atomic
 			  forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
 		   }
-
-
-		   {
-  	   		   #pragma simd
 			   for(int i = 0; i < numVerts; i++)
 			   {
 				  forceY[i] += GRAVITY;
@@ -390,11 +386,8 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 			    for(int i = 0; i < numVerts; i++) {
 			        forceX[i] = forceY[i] = forceZ[i] = 0;
 			    }
-			}
-		   
-		   // memset(forceX, numVerts * sizeof(double), 0);
-		   // memset(forceY, numVerts * sizeof(double), 0);
-		   // memset(forceZ, numVerts * sizeof(double), 0);
+		 
+		
 	   }
    }
    delete [] lockedVerts;

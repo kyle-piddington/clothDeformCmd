@@ -9,6 +9,6 @@ osx: clean
 icc: clean
 	icpc -std=c++11 -O3 -openmp -pedantic -g -Wno-deprecated *.cpp *.cc -lglut -lGL -lGLU -DGL_GLEXT_PROTOTYPES
 offload: clean
-	icpc -std=c++11 -DOFFLOAD -O3 -qopt-report-file=mic-aos-main.optrpt -qopt-report=5 -qopt-report-phase=vec     -qopt-report-routine=step     -openmp -pedantic -g -Wno-deprecated -lglut -lGL -lGLU  *.cpp *.cc -DGL_GLEXT_PROTOTYPES
+	icpc -std=c++11 -DOFFLOAD -O3 -qopt-report-file=cloth.optrpt -qopt-report=5 -qopt-report-phase=vec -qopt-report-routine=step     -openmp -pedantic -g -Wno-deprecated -lglut -lGL -lGLU  *.cpp *.cc -DGL_GLEXT_PROTOTYPES
 clean:
 	rm -rf *~ *.o a3 a.out*
