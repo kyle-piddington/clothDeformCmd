@@ -15,9 +15,8 @@ class Cloth;
 class ClothForceIntegrator
 {
 public:
-   ClothForceIntegrator(){};
+   ClothForceIntegrator(std::vector<int>  indices, std::vector<float>  vertices, std::vector<float>  weights);
    ~ClothForceIntegrator();
-   void init(std::vector<int>  indices, std::vector<float>  vertices, std::vector<float>  weights);
    void step(double dt, float * outputVertices, std::vector<int> & lockedVerts);
 private:
    inline void caluclateTriangleWeights( std::vector<float> & weights, std::vector<int> & inds);
@@ -58,9 +57,9 @@ private:
    unsigned int * counts;
    unsigned int * locs;
 
-   int numTriangles;
-   int numVerts;
-   int numIndicies;
+   const int numTriangles;
+   const int numVerts;
+   const int numIndicies;
 
    double time;
    double dt;

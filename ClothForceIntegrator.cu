@@ -110,7 +110,7 @@ inline double lengthSq(Vector v)
    [a b c] [a b c]
    vertices:
    [x y z] [ x y z] [x y z] */
-void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<float>  vertices, std::vector<float>  weights)
+ClothForceIntegrator::ClothForceIntegrator(std::vector<int>  orig_indices, std::vector<float>  vertices, std::vector<float>  weights)
 {
    /**
 	* Replace with __mm_malloc later

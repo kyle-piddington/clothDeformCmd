@@ -51,8 +51,7 @@ Cloth::~Cloth()
  */
 void Cloth::init()
 {
-   integrator = new ClothForceIntegrator();
-   integrator->init(inds,verts,tex);
+   integrator = new ClothForceIntegrator(inds,verts,tex);
    glGenBuffers(1, &posBufID);
    //glGenBuffers(1, &texBufID);
    glGenBuffers(1, &indBufID);
