@@ -105,6 +105,11 @@ inline double lengthSq(Vector v)
  * Create the initial arrays, and organize data in SOA structure, push to the Phi.
  * @param cloth [description]
  */
+ /**
+   OrigIndicies:
+   [a b c] [a b c]
+   vertices:
+   [x y z] [ x y z] [x y z] */
 void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<float>  vertices, std::vector<float>  weights)
 {
    /**
@@ -112,6 +117,9 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 	*/
    numTriangles = orig_indices.size()/3;
    numVerts = vertices.size()/3;
+   
+   std::cout << "numVerts: " << numVerts << std::endl;
+   
    indicies = new int[orig_indices.size()];
    wUA = new double[numTriangles];
    wUB = new double[numTriangles];
@@ -131,6 +139,10 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
    forceX = new double[numVerts];
    forceY = new double[numVerts];
    forceZ = new double[numVerts];
+   
+   expandedForceX = new double[numTriangles*3];
+   expandedForceY = new double[numTriangles*3];
+   expandedForceZ = new double[numTriangles*3];
 
    for(int i = 0; i < numVerts; i++)
    {
@@ -149,6 +161,59 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 
    memcpy(indicies,orig_indices.data(), sizeof(int)*orig_indices.size());
    caluclateTriangleWeights(weights,orig_indices);
+   
+   numIndicies = orig_indices.size();
+   
+   counts = new unsigned int[numVerts];
+   locs = new unsigned int[numVerts];
+   outIdx = new unsigned int[numTriangles*3];
+   
+   for(int i = 0; i < numVerts; i++) { 	// init counts
+      counts[i] = 0;
+   }
+   
+   for(int i = 0; i < numIndicies; i++) {
+      counts[indicies[i]]++;
+   }
+   
+   std::cout << "init'd counts" << std::endl;
+   
+   locs[0] = 0;   	// init locs
+   for(int i = 1; i < numVerts; i++) {
+      locs[i] = counts[i - 1] + locs[i - 1];
+   }
+   
+   unsigned int *tempCounts = new unsigned int[numVerts];   	// init outIdx
+   for(int i = 0; i < numVerts; i++) {
+      tempCounts[i] = 0;
+   }
+   
+   for(int i = 0; i < numIndicies; i++) {
+      int vertex = indicies[i];
+      outIdx[i] = locs[vertex] + tempCounts[vertex];
+      tempCounts[vertex]++;
+   }
+   
+   std::cout << "dumping counts: ";
+   for (int i = 0; i < numIndicies; i++) {
+      std::cout << counts[i] << " ";
+   }
+   std::cout << std::endl;
+   
+   std::cout << "dumping locs: ";
+   for (int i = 0; i < numIndicies; i++) {
+      std::cout << locs[i] << " ";
+   }
+   std::cout << std::endl;
+   
+   std::cout << "dumping outIdx: ";
+   for (int i = 0; i < numIndicies; i++) {
+      std::cout << outIdx[i] << " ";
+   }
+   std::cout << std::endl;
+   
+   std::cout << "ran init without dying" << std::endl;
+//   exit(EXIT_FAILURE);
 }
 
 void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & theLockedVerts )
@@ -199,20 +264,34 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
 		  //Update first vertex
-		  forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
-		  forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
-		  forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
+		  expandedForceX[outIdx[i*3]] = forceA.x - DAMPN * vA.x;
+		  expandedForceY[outIdx[i*3]] = forceA.y - DAMPN * vA.y;
+		  expandedForceZ[outIdx[i*3]] = forceA.z - DAMPN * vA.z;
 
 		  //Update second vertex
-		  forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
-		  forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
-		  forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
+		  expandedForceX[outIdx[i*3+1]] = forceB.x - DAMPN * vB.x;
+		  expandedForceY[outIdx[i*3+1]] = forceB.y - DAMPN * vB.y;
+		  expandedForceZ[outIdx[i*3+1]] = forceB.z - DAMPN * vB.z;
 
 		  //update third vertex
-		  forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
-		  forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.y;
-		  forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
+		  expandedForceX[outIdx[i*3 + 2]] = forceC.x - DAMPN * vC.x;
+		  expandedForceY[outIdx[i*3 + 2]] = forceC.y - DAMPN * vC.y;
+		  expandedForceZ[outIdx[i*3 + 2]] = forceC.z - DAMPN * vC.z;
 	   }
+      
+      // todo: calc forceXYZ with expandedForceXYZ
+      for (int i = 0; i < numTriangles*3; i++) {
+         unsigned int theLoc = locs[indicies[i]];
+         
+//         if (theLoc <= numIndicies) {
+            forceX[theLoc] += expandedForceX[i];
+            forceY[theLoc] += expandedForceY[i];
+            forceZ[theLoc] += expandedForceZ[i];
+//         }
+//         else {
+//            std::cout << "i: " << i << ", theLoc: " << theLoc << std::endl;
+//         }
+      }
 
 	   for(int i = 0; i < numVerts; i++)
 	   {

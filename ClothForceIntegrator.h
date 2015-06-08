@@ -34,20 +34,33 @@ private:
    double * wVB;
    double * wVC;
    double * dArray;
+   
    double * vertsX;
    double * vertsY;
    double * vertsZ;
+   
    double * velsX;
    double * velsY;
    double * velsZ;
-   int * indicies;
-
+   
    double * forceX;
    double * forceY;
    double * forceZ;
+   
+   int * indicies;
+   
+   unsigned int * outIdx;
+   
+   double * expandedForceX;
+   double * expandedForceY;
+   double * expandedForceZ;
+   
+   unsigned int * counts;
+   unsigned int * locs;
 
    int numTriangles;
    int numVerts;
+   int numIndicies;
 
    double time;
    double dt;
