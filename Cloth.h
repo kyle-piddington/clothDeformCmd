@@ -1,6 +1,4 @@
 /**
- * A horribly ineficient shape for a triangle mesh.
- * Seriously it's awful, don't use it.
  *
  */
 #ifndef __Cloth_H___

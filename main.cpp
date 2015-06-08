@@ -23,7 +23,7 @@
 #include "Cloth.h"
 #include <memory>
 
-#define TIMESTEP 0.0005
+#define TIMESTEP 0.0001
 using namespace std;
 bool keyToggles[256];
 bool keyDowns[256];
@@ -33,7 +33,7 @@ Program prog_phong;
 Program prog_debug;
 
 
-Cloth testCloth(8,8,64);
+Cloth testCloth(16,16,64);
 
 Material defaultMaterial = Material(
 		glm::vec3(0.2,0.2,0.2),

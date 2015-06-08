@@ -42,7 +42,7 @@ res(res)
 Cloth::~Cloth()
 {
 
-   delete integrator;
+   _mm_free(integrator);
 }
 
 
@@ -51,7 +51,8 @@ Cloth::~Cloth()
  */
 void Cloth::init()
 {
-   integrator = new ClothForceIntegrator();
+   integrator = (ClothForceIntegrator * )_mm_malloc(sizeof(ClothForceIntegrator), 64);
+  
    integrator->init(inds,verts,tex);
    glGenBuffers(1, &posBufID);
    //glGenBuffers(1, &texBufID);

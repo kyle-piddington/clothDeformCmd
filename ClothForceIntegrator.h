@@ -45,7 +45,7 @@ private:
    double * forceX;
    double * forceY;
    double * forceZ;
-
+   bool __offload = false;
    int numTriangles;
    int numVerts;
 
