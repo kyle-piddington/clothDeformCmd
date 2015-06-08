@@ -10,10 +10,6 @@
 #define DAMPN  0.05
 #define COLLISIONSTR 20.0
 
-#define ALLOC alloc_if(1)
-#define FREE free_if(1)
-#define RETAIN free_if(0)
-#define REUSE alloc_if(0)
 #define MIN_STEP 0.0005 //Seconds
 
 const double YoungPoissonMatrixScalar = YOUNG_MOD/(1 - POISSON_COEFF * POISSON_COEFF);
@@ -153,26 +149,6 @@ void ClothForceIntegrator::init(std::vector<int>  orig_indices, std::vector<floa
 
    memcpy(indicies,orig_indices.data(), sizeof(int)*orig_indices.size());
    caluclateTriangleWeights(weights,orig_indices);
-	#ifdef OFFLOAD
-	#pragma offload_transfer target(mic)\
-		in(wUA: length(numTriangles) ALLOC RETAIN)\
-		in(wUB: length(numTriangles) ALLOC RETAIN)\
-		in(wUC: length(numTriangles) ALLOC RETAIN)\
-		in(wVA: length(numTriangles) ALLOC RETAIN)\
-		in(wVB: length(numTriangles) ALLOC RETAIN)\
-		in(wVC: length(numTriangles) ALLOC RETAIN)\
-		in(dArray: length(numTriangles) ALLOC RETAIN)\
-		in(vertsX: length(numVerts) ALLOC RETAIN)\
-		in(vertsY: length(numVerts) ALLOC RETAIN)\
-		in(vertsZ: length(numVerts) ALLOC RETAIN)\
-		in(velsX: length(numVerts) ALLOC RETAIN)\
-		in(velsY: length(numVerts) ALLOC RETAIN)\
-		in(velsZ: length(numVerts) ALLOC RETAIN)\
-		in(forceX: length(numVerts) ALLOC RETAIN)\
-		in(forceY: length(numVerts) ALLOC RETAIN)\
-		in(forceZ: length(numVerts) ALLOC RETAIN)\
-		in(indicies: length(numTriangles*3) ALLOC RETAIN)
-	#endif
 }
 
 void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::vector<int> & theLockedVerts )
@@ -187,7 +163,6 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
       const double dt = MIN_STEP;
       const double recipMass = 1/(MASS/numVerts);
 
-	   #pragma omp parallel for
 	   for(int i = 0; i < numTriangles; i++)
 	   {
 		  Vector A, B, C, vA, vB, vC;
@@ -224,27 +199,18 @@ void ClothForceIntegrator::step(double stepAmnt, float * outputVertices, std::ve
 		  Vector forceC = calculateForce(U,V,wUC[i],wVC[i],dArray[i]);
 
 		  //Update first vertex
-		  #pragma omp atomic
 		  forceX[indicies[i*3]] += forceA.x - DAMPN * vA.x;
-		  #pragma omp atomic
 		  forceY[indicies[i*3]] += forceA.y - DAMPN * vA.y;
-		  #pragma omp atomic
 		  forceZ[indicies[i*3]] += forceA.z - DAMPN * vA.z;
 
 		  //Update second vertex
-		  #pragma omp atomic
 		  forceX[indicies[i*3+1]] += forceB.x - DAMPN * vB.x;
-		  #pragma omp atomic     
 		  forceY[indicies[i*3+1]] += forceB.y - DAMPN * vB.y;
-		  #pragma omp atomic
 		  forceZ[indicies[i*3+1]] += forceB.z - DAMPN * vB.z;
 
 		  //update third vertex
-		  #pragma omp atomic
 		  forceX[indicies[i*3 + 2]] += forceC.x - DAMPN * vC.x;
-		  #pragma omp atomic
 		  forceY[indicies[i*3 + 2]] += forceC.y - DAMPN * vC.y;
-		  #pragma omp atomic
 		  forceZ[indicies[i*3 + 2]] += forceC.z - DAMPN * vC.z;
 	   }
 
