@@ -239,18 +239,3 @@ void Cloth::expand(float amnt)
    // TODO: implement kick for cuda
    std::cerr << "kick not implemented for cuda" << std::endl;
 }
-
-/**
- * Ask the integrator to copy it's current simulation state to the Xeon Phi, and set the offload variable
- */
-void Cloth::startOffload()
-{
-   integrator->startOffload();   
-}
-/**
- * Tell the integartor to stop all the offloading, and copy the current state back to the CPU
- */
-void Cloth::endOffload()
-{
-   integrator->endOffload();
-}

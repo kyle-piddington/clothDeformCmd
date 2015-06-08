@@ -234,17 +234,6 @@ void keyboardGL(unsigned char key, int x, int y)
 			testCloth.kickCenter();
 			update(1/60.0);
 			break;
-      case 'o':
-
-         if(keyToggles['o'])
-         {
-            testCloth.startOffload();
-         }
-         else
-         {
-            testCloth.endOffload();
-         }
-         break;
 	}
    if(keyToggles['l'])
 	{
